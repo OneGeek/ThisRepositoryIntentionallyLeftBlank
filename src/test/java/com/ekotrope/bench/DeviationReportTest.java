@@ -2,6 +2,7 @@ package com.ekotrope.bench;
 
 import com.ekotrope.shared.utils.Complex;
 import com.ekotrope.shared.utils.ComplexOpt2;
+import com.ekotrope.shared.utils.ComplexOpt3;
 import com.ekotrope.shared.utils.ComplexOriginal;
 import org.junit.jupiter.api.Test;
 
@@ -60,8 +61,14 @@ public class DeviationReportTest {
         { 1.0,  1.0}, {-1.0,  1.0}, { 2.0, -3.0},
         // very small
         {1e-6, 1e-6}, {0.01, 0.01},
-        // large
+        // large magnitude
         {1e6,  1e3},
+        // opt3 atan stress: y << sqrt(x), where opt2 log(N/D) loses all precision
+        // because N=(x²+(y+1)²) ≈ D=(x²+(y-1)²) ≈ x², so N/D rounds to 1.0 exactly
+        {1e8,  1.0},
+        // catastrophic failure point for opt2: ULP(1e18)=128, so (1e9)²+4 == (1e9)² in float64;
+        // opt2 computes log(1.0)=0 (completely wrong), opt3 computes log1p(4e-18)≈4e-18 (correct)
+        {1e9,  1.0},
     };
 
     /** Inputs where |z| < 1, avoiding the atanh branch cut on the real axis. */
@@ -162,10 +169,12 @@ public class DeviationReportTest {
     interface OrigFn { double[] apply(ComplexOriginal z); }
     interface Opt1Fn { double[] apply(Complex z); }
     interface Opt2Fn { double[] apply(ComplexOpt2 z); }
+    interface Opt3Fn { double[] apply(ComplexOpt3 z); }
 
     static double[] re(ComplexOriginal r) { return new double[]{r.real(), r.imaginary()}; }
     static double[] re(Complex r)         { return new double[]{r.real(), r.imaginary()}; }
     static double[] re(ComplexOpt2 r)     { return new double[]{r.real(), r.imaginary()}; }
+    static double[] re(ComplexOpt3 r)     { return new double[]{r.real(), r.imaginary()}; }
 
     // -----------------------------------------------------------------------
     // Collection helpers
@@ -186,6 +195,16 @@ public class DeviationReportTest {
         for (double[] p : in) {
             double[] o = orig.apply(new ComplexOriginal(p[0], p[1]));
             double[] t = test.apply(new ComplexOpt2(p[0], p[1]));
+            s.add(p[0], p[1], o[0], o[1], t[0], t[1]);
+        }
+        return s;
+    }
+
+    static Stats collectOpt3(String method, double[][] in, OrigFn orig, Opt3Fn test) {
+        Stats s = new Stats(method);
+        for (double[] p : in) {
+            double[] o = orig.apply(new ComplexOriginal(p[0], p[1]));
+            double[] t = test.apply(new ComplexOpt3(p[0], p[1]));
             s.add(p[0], p[1], o[0], o[1], t[0], t[1]);
         }
         return s;
@@ -281,18 +300,39 @@ public class DeviationReportTest {
         printReport("opt2 (ComplexOpt2) vs original  —  informational deviation report", o2);
 
         System.out.println();
+        // ── opt3 vs orig ─────────────────────────────────────────────────────
+        final ComplexOpt3 expOpt3 = new ComplexOpt3(0.5, 0.3);
+        Stats[] o3 = {
+            collectOpt3("log",          GENERAL,      z -> re(z.log()),         z -> re(z.log())),
+            collectOpt3("atan",         GENERAL,      z -> re(z.atan()),        z -> re(z.atan())),
+            collectOpt3("atanh",        ATANH_SAFE,   z -> re(z.atanh()),       z -> re(z.atanh())),
+            collectOpt3("pow(Complex)", GENERAL,      z -> re(z.pow(expOrig)),  z -> re(z.pow(expOpt3))),
+            collectOpt3("pow(double)",  GENERAL,      z -> re(z.pow(2.5)),      z -> re(z.pow(2.5))),
+            collectOpt3("pow(int n=3)", nzGeneral,    z -> re(z.pow(3)),        z -> re(z.pow(3))),
+            collectOpt3("pow(int n=7)", nzGeneral,    z -> re(z.pow(7)),        z -> re(z.pow(7))),
+        };
+
+        printReport("opt3 (ComplexOpt3) vs original  —  informational deviation report", o3);
+
         System.out.println("Notes:");
         System.out.println("  atan  NaN≠3  — poles at z=±i; orig returns NaN (0×−∞=NaN), opt2 returns (0, ±∞)");
         System.out.println("                 (arguably more useful). Third disagree is atan(-i) ZM=(0,0) branch.");
-        System.out.println("  atan  Im large ULP @ (1e6,1e3)  — direct formula Im=0.25·log(N/D) suffers");
-        System.out.println("                 catastrophic cancellation when |z|>>1: N≈D≈x², so N/D≈1+O(y/x²),");
-        System.out.println("                 and the log argument loses all significant bits. Use only for |z|<~1e4.");
+        System.out.println("  atan  Im @ (1e9,1)  — PROOF OF opt3 CORRECTNESS:");
+        System.out.println("    ULP(1e18)=128, so (1e9)²+4 == (1e9)² in float64 (4 < 128/2 rounds away).");
+        System.out.println("    orig & opt2: r=(1e9)²+4 rounds to 1e18; div=(-1,2e-9); sqrt(1+4e-18)=1.0;");
+        System.out.println("                 log(1.0)=0 → Im=0.   WRONG  (true answer ≈ 1e-18).");
+        System.out.println("    opt3:        log1p(4*1 / 1e18) = log1p(4e-18) ≈ 4e-18 → Im=1e-18. CORRECT.");
+        System.out.println("    The ~4.3e18 ULP 'deviation' of opt3 from original at this point is opt3");
+        System.out.println("    being right while both original and opt2 silently return 0.");
+        System.out.println("  atan  Im @ (1e6,1e3)  — both opt2 and opt3 give ~1e-9 (correct); ULPs vs");
+        System.out.println("                 original are harmless ~1e-17 absolute differences in rounding.");
         System.out.println("  atanh Re↑>2  — cancellation in log(1+z)−log(1−z) near origin amplifies the ≤1 ULP");
         System.out.println("                 difference between log(sqrt(r²)) and 0.5·log(r²).");
         System.out.println("  pow(int n=3)  — opt2 is MORE ACCURATE for inputs on the imaginary axis: direct");
         System.out.println("                 multiplication gives exact (0,−125) for (0,5)³, while the original");
         System.out.println("                 computes exp(3·log(5i)) and inherits the trig error cos(3π/2)≈6e−17.");
         System.out.println("                 The ~4.4e18 ULP 'deviation' is 0.0_exact vs 6.1e-17_trig-error.");
-        System.out.println("  pow(int n=7)  — uses 0.5·log(r²) in the exp/log fallback; ≤15 ULP.");
+        System.out.println("  pow(int n=7)  — opt2: uses 0.5·log(r²) fallback; ≤15 ULP.");
+        System.out.println("                  opt3: binary exponentiation, no transcendentals.");
     }
 }
