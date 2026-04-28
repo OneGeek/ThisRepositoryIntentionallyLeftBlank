@@ -1,6 +1,7 @@
 package com.ekotrope.bench;
 
 import com.ekotrope.shared.utils.Complex;
+import com.ekotrope.shared.utils.ComplexOpt2;
 import com.ekotrope.shared.utils.ComplexOriginal;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
@@ -15,101 +16,60 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Thread)
 public class ComplexBenchmark {
 
-    // Inputs chosen to exercise all code paths without hitting NaN/Inf
-    private Complex opt;
-    private Complex optExp;
+    private Complex      opt1;
+    private Complex      opt1Exp;
+    private ComplexOpt2  opt2;
+    private ComplexOpt2  opt2Exp;
     private ComplexOriginal orig;
     private ComplexOriginal origExp;
 
     @Setup
     public void setup() {
-        opt     = new Complex(1.5, 0.7);
-        optExp  = new Complex(0.5, 0.3);
+        opt1    = new Complex(1.5, 0.7);
+        opt1Exp = new Complex(0.5, 0.3);
+        opt2    = new ComplexOpt2(1.5, 0.7);
+        opt2Exp = new ComplexOpt2(0.5, 0.3);
         orig    = new ComplexOriginal(1.5, 0.7);
         origExp = new ComplexOriginal(0.5, 0.3);
     }
 
-    // --- atan ---
+    // ---- atan ----
 
-    @Benchmark
-    public void orig_atan(Blackhole bh) {
-        bh.consume(orig.atan());
-    }
+    @Benchmark public void orig_atan(Blackhole bh)  { bh.consume(orig.atan()); }
+    @Benchmark public void opt1_atan(Blackhole bh)  { bh.consume(opt1.atan()); }
+    @Benchmark public void opt2_atan(Blackhole bh)  { bh.consume(opt2.atan()); }
 
-    @Benchmark
-    public void opt_atan(Blackhole bh) {
-        bh.consume(opt.atan());
-    }
+    // ---- atanh ----
 
-    // --- atanh ---
+    @Benchmark public void orig_atanh(Blackhole bh) { bh.consume(orig.atanh()); }
+    @Benchmark public void opt1_atanh(Blackhole bh) { bh.consume(opt1.atanh()); }
+    @Benchmark public void opt2_atanh(Blackhole bh) { bh.consume(opt2.atanh()); }
 
-    @Benchmark
-    public void orig_atanh(Blackhole bh) {
-        bh.consume(orig.atanh());
-    }
+    // ---- log ----
 
-    @Benchmark
-    public void opt_atanh(Blackhole bh) {
-        bh.consume(opt.atanh());
-    }
+    @Benchmark public void orig_log(Blackhole bh)   { bh.consume(orig.log()); }
+    @Benchmark public void opt1_log(Blackhole bh)   { bh.consume(opt1.log()); }
+    @Benchmark public void opt2_log(Blackhole bh)   { bh.consume(opt2.log()); }
 
-    // --- pow(Complex) ---
+    // ---- pow(Complex) ----
 
-    @Benchmark
-    public void orig_powComplex(Blackhole bh) {
-        bh.consume(orig.pow(origExp));
-    }
+    @Benchmark public void orig_powComplex(Blackhole bh) { bh.consume(orig.pow(origExp)); }
+    @Benchmark public void opt1_powComplex(Blackhole bh) { bh.consume(opt1.pow(opt1Exp)); }
+    @Benchmark public void opt2_powComplex(Blackhole bh) { bh.consume(opt2.pow(opt2Exp)); }
 
-    @Benchmark
-    public void opt_powComplex(Blackhole bh) {
-        bh.consume(opt.pow(optExp));
-    }
+    // ---- pow(double) ----
 
-    // --- pow(double) ---
+    @Benchmark public void orig_powDouble(Blackhole bh) { bh.consume(orig.pow(2.5)); }
+    @Benchmark public void opt1_powDouble(Blackhole bh) { bh.consume(opt1.pow(2.5)); }
+    @Benchmark public void opt2_powDouble(Blackhole bh) { bh.consume(opt2.pow(2.5)); }
 
-    @Benchmark
-    public void orig_powDouble(Blackhole bh) {
-        bh.consume(orig.pow(2.5));
-    }
+    // ---- pow(int) — benchmarked at n=3 (fast-path) and n=7 (fallback) ----
 
-    @Benchmark
-    public void opt_powDouble(Blackhole bh) {
-        bh.consume(opt.pow(2.5));
-    }
+    @Benchmark public void orig_powInt3(Blackhole bh) { bh.consume(orig.pow(3)); }
+    @Benchmark public void opt1_powInt3(Blackhole bh) { bh.consume(opt1.pow(3)); }
+    @Benchmark public void opt2_powInt3(Blackhole bh) { bh.consume(opt2.pow(3)); }
 
-    // --- pow(int) ---
-
-    @Benchmark
-    public void orig_powInt(Blackhole bh) {
-        bh.consume(orig.pow(3));
-    }
-
-    @Benchmark
-    public void opt_powInt(Blackhole bh) {
-        bh.consume(opt.pow(3));
-    }
-
-    // --- log (local-cache benefit) ---
-
-    @Benchmark
-    public void orig_log(Blackhole bh) {
-        bh.consume(orig.log());
-    }
-
-    @Benchmark
-    public void opt_log(Blackhole bh) {
-        bh.consume(opt.log());
-    }
-
-    // --- sqrt (local-cache benefit) ---
-
-    @Benchmark
-    public void orig_sqrt(Blackhole bh) {
-        bh.consume(orig.sqrt());
-    }
-
-    @Benchmark
-    public void opt_sqrt(Blackhole bh) {
-        bh.consume(opt.sqrt());
-    }
+    @Benchmark public void orig_powInt7(Blackhole bh) { bh.consume(orig.pow(7)); }
+    @Benchmark public void opt1_powInt7(Blackhole bh) { bh.consume(opt1.pow(7)); }
+    @Benchmark public void opt2_powInt7(Blackhole bh) { bh.consume(opt2.pow(7)); }
 }
