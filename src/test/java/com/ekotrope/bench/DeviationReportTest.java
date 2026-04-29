@@ -3,6 +3,7 @@ package com.ekotrope.bench;
 import com.ekotrope.shared.utils.Complex;
 import com.ekotrope.shared.utils.ComplexOpt2;
 import com.ekotrope.shared.utils.ComplexOpt3;
+import com.ekotrope.shared.utils.ComplexOpt4;
 import com.ekotrope.shared.utils.ComplexOriginal;
 import org.junit.jupiter.api.Test;
 
@@ -170,11 +171,13 @@ public class DeviationReportTest {
     interface Opt1Fn { double[] apply(Complex z); }
     interface Opt2Fn { double[] apply(ComplexOpt2 z); }
     interface Opt3Fn { double[] apply(ComplexOpt3 z); }
+    interface Opt4Fn { double[] apply(ComplexOpt4 z); }
 
     static double[] re(ComplexOriginal r) { return new double[]{r.real(), r.imaginary()}; }
     static double[] re(Complex r)         { return new double[]{r.real(), r.imaginary()}; }
     static double[] re(ComplexOpt2 r)     { return new double[]{r.real(), r.imaginary()}; }
     static double[] re(ComplexOpt3 r)     { return new double[]{r.real(), r.imaginary()}; }
+    static double[] re(ComplexOpt4 r)     { return new double[]{r.real(), r.imaginary()}; }
 
     // -----------------------------------------------------------------------
     // Collection helpers
@@ -205,6 +208,16 @@ public class DeviationReportTest {
         for (double[] p : in) {
             double[] o = orig.apply(new ComplexOriginal(p[0], p[1]));
             double[] t = test.apply(new ComplexOpt3(p[0], p[1]));
+            s.add(p[0], p[1], o[0], o[1], t[0], t[1]);
+        }
+        return s;
+    }
+
+    static Stats collectOpt4(String method, double[][] in, OrigFn orig, Opt4Fn test) {
+        Stats s = new Stats(method);
+        for (double[] p : in) {
+            double[] o = orig.apply(new ComplexOriginal(p[0], p[1]));
+            double[] t = test.apply(new ComplexOpt4(p[0], p[1]));
             s.add(p[0], p[1], o[0], o[1], t[0], t[1]);
         }
         return s;
@@ -314,6 +327,22 @@ public class DeviationReportTest {
 
         printReport("opt3 (ComplexOpt3) vs original  —  informational deviation report", o3);
 
+        System.out.println();
+        // ── opt4 vs orig ─────────────────────────────────────────────────────
+        final ComplexOpt4 expOpt4 = new ComplexOpt4(0.5, 0.3);
+        Stats[] o4 = {
+            collectOpt4("log",             GENERAL,      z -> re(z.log()),             z -> re(z.log())),
+            collectOpt4("atan",            GENERAL,      z -> re(z.atan()),            z -> re(z.atan())),
+            collectOpt4("atanh",           ATANH_SAFE,   z -> re(z.atanh()),           z -> re(z.atanh())),
+            collectOpt4("pow(Complex)",    GENERAL,      z -> re(z.pow(expOrig)),      z -> re(z.pow(expOpt4))),
+            collectOpt4("pow(double)",     GENERAL,      z -> re(z.pow(2.5)),          z -> re(z.pow(2.5))),
+            collectOpt4("pow(dbl int n=7)",GENERAL,      z -> re(z.pow(7.0)),          z -> re(z.pow(7.0))),
+            collectOpt4("pow(int n=3)",    nzGeneral,    z -> re(z.pow(3)),            z -> re(z.pow(3))),
+            collectOpt4("pow(int n=7)",    nzGeneral,    z -> re(z.pow(7)),            z -> re(z.pow(7))),
+        };
+
+        printReport("opt4 (ComplexOpt4) vs original  —  informational deviation report", o4);
+
         System.out.println("Notes:");
         System.out.println("  atan  NaN≠3  — poles at z=±i; orig returns NaN (0×−∞=NaN), opt2 returns (0, ±∞)");
         System.out.println("                 (arguably more useful). Third disagree is atan(-i) ZM=(0,0) branch.");
@@ -333,6 +362,12 @@ public class DeviationReportTest {
         System.out.println("                 computes exp(3·log(5i)) and inherits the trig error cos(3π/2)≈6e−17.");
         System.out.println("                 The ~4.4e18 ULP 'deviation' is 0.0_exact vs 6.1e-17_trig-error.");
         System.out.println("  pow(int n=7)  — opt2: uses 0.5·log(r²) fallback; ≤15 ULP.");
-        System.out.println("                  opt3: binary exponentiation, no transcendentals.");
+        System.out.println("                  opt3/opt4: binary exponentiation, no transcendentals.");
+        System.out.println("  log near 1    — opt4 uses log1p((x-1)(x+1)+y²) for |r²-1|<0.5.");
+        System.out.println("                  Improves accuracy by 1-2 ULP near the unit circle;");
+        System.out.println("                  no change for other inputs (falls back to log(r²)).");
+        System.out.println("  pow(dbl 7.0)  — opt4 detects integer-valued doubles and delegates");
+        System.out.println("                  to binary exponentiation; same speed as pow(int 7).");
+        System.out.println("  pow(Complex)  — opt4 short-circuits to pow(double) when Im(exp)=0.");
     }
 }

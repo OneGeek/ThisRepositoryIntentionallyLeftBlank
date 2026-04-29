@@ -3,6 +3,7 @@ package com.ekotrope.bench;
 import com.ekotrope.shared.utils.Complex;
 import com.ekotrope.shared.utils.ComplexOpt2;
 import com.ekotrope.shared.utils.ComplexOpt3;
+import com.ekotrope.shared.utils.ComplexOpt4;
 import com.ekotrope.shared.utils.ComplexOriginal;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
@@ -25,6 +26,8 @@ public class ComplexBenchmark {
     private ComplexOpt2     opt2Exp;
     private ComplexOpt3     opt3;
     private ComplexOpt3     opt3Exp;
+    private ComplexOpt4     opt4;
+    private ComplexOpt4     opt4Exp;
 
     @Setup
     public void setup() {
@@ -36,6 +39,8 @@ public class ComplexBenchmark {
         opt2Exp = new ComplexOpt2(0.5, 0.3);
         opt3    = new ComplexOpt3(1.5, 0.7);
         opt3Exp = new ComplexOpt3(0.5, 0.3);
+        opt4    = new ComplexOpt4(1.5, 0.7);
+        opt4Exp = new ComplexOpt4(0.5, 0.3);
     }
 
     // ---- atan ----
@@ -44,6 +49,7 @@ public class ComplexBenchmark {
     @Benchmark public void opt1_atan(Blackhole bh)  { bh.consume(opt1.atan()); }
     @Benchmark public void opt2_atan(Blackhole bh)  { bh.consume(opt2.atan()); }
     @Benchmark public void opt3_atan(Blackhole bh)  { bh.consume(opt3.atan()); }
+    @Benchmark public void opt4_atan(Blackhole bh)  { bh.consume(opt4.atan()); }
 
     // ---- atanh ----
 
@@ -51,6 +57,7 @@ public class ComplexBenchmark {
     @Benchmark public void opt1_atanh(Blackhole bh) { bh.consume(opt1.atanh()); }
     @Benchmark public void opt2_atanh(Blackhole bh) { bh.consume(opt2.atanh()); }
     @Benchmark public void opt3_atanh(Blackhole bh) { bh.consume(opt3.atanh()); }
+    @Benchmark public void opt4_atanh(Blackhole bh) { bh.consume(opt4.atanh()); }
 
     // ---- log ----
 
@@ -58,6 +65,7 @@ public class ComplexBenchmark {
     @Benchmark public void opt1_log(Blackhole bh)   { bh.consume(opt1.log()); }
     @Benchmark public void opt2_log(Blackhole bh)   { bh.consume(opt2.log()); }
     @Benchmark public void opt3_log(Blackhole bh)   { bh.consume(opt3.log()); }
+    @Benchmark public void opt4_log(Blackhole bh)   { bh.consume(opt4.log()); }
 
     // ---- pow(Complex) ----
 
@@ -65,25 +73,34 @@ public class ComplexBenchmark {
     @Benchmark public void opt1_powComplex(Blackhole bh) { bh.consume(opt1.pow(opt1Exp)); }
     @Benchmark public void opt2_powComplex(Blackhole bh) { bh.consume(opt2.pow(opt2Exp)); }
     @Benchmark public void opt3_powComplex(Blackhole bh) { bh.consume(opt3.pow(opt3Exp)); }
+    @Benchmark public void opt4_powComplex(Blackhole bh) { bh.consume(opt4.pow(opt4Exp)); }
 
-    // ---- pow(double) ----
+    // ---- pow(double) non-integer: exp/log path exercised by all ----
 
     @Benchmark public void orig_powDouble(Blackhole bh) { bh.consume(orig.pow(2.5)); }
     @Benchmark public void opt1_powDouble(Blackhole bh) { bh.consume(opt1.pow(2.5)); }
     @Benchmark public void opt2_powDouble(Blackhole bh) { bh.consume(opt2.pow(2.5)); }
     @Benchmark public void opt3_powDouble(Blackhole bh) { bh.consume(opt3.pow(2.5)); }
+    @Benchmark public void opt4_powDouble(Blackhole bh) { bh.consume(opt4.pow(2.5)); }
 
-    // ---- pow(int n=3): fast-path in opt2/opt3, exp/log in orig/opt1 ----
+    // ---- pow(double) integer-valued: fast-path in opt4, exp/log in orig–opt3 ----
+
+    @Benchmark public void orig_powDoubleInt7(Blackhole bh) { bh.consume(orig.pow(7.0)); }
+    @Benchmark public void opt4_powDoubleInt7(Blackhole bh) { bh.consume(opt4.pow(7.0)); }
+
+    // ---- pow(int n=3): fast-path in opt2/opt3/opt4, exp/log in orig/opt1 ----
 
     @Benchmark public void orig_powInt3(Blackhole bh) { bh.consume(orig.pow(3)); }
     @Benchmark public void opt1_powInt3(Blackhole bh) { bh.consume(opt1.pow(3)); }
     @Benchmark public void opt2_powInt3(Blackhole bh) { bh.consume(opt2.pow(3)); }
     @Benchmark public void opt3_powInt3(Blackhole bh) { bh.consume(opt3.pow(3)); }
+    @Benchmark public void opt4_powInt3(Blackhole bh) { bh.consume(opt4.pow(3)); }
 
-    // ---- pow(int n=7): exp/log fallback in opt1/opt2, binary-exp in opt3 ----
+    // ---- pow(int n=7): binary-exp in opt3/opt4, exp/log fallback in orig–opt2 ----
 
     @Benchmark public void orig_powInt7(Blackhole bh) { bh.consume(orig.pow(7)); }
     @Benchmark public void opt1_powInt7(Blackhole bh) { bh.consume(opt1.pow(7)); }
     @Benchmark public void opt2_powInt7(Blackhole bh) { bh.consume(opt2.pow(7)); }
     @Benchmark public void opt3_powInt7(Blackhole bh) { bh.consume(opt3.pow(7)); }
+    @Benchmark public void opt4_powInt7(Blackhole bh) { bh.consume(opt4.pow(7)); }
 }
