@@ -73,6 +73,11 @@ dependencies {
     // Activity / lifecycle
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
+    // Force the transitively-pulled Fragment (1.2.4, via wear) up to a current version.
+    // The app uses ComponentActivity, not FragmentActivity, but lint's
+    // InvalidFragmentVersionForActivityResult check fails the release build on any
+    // Fragment < 1.3.0 present on the classpath; 1.8.x resolves it at the source.
+    implementation("androidx.fragment:fragment:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")

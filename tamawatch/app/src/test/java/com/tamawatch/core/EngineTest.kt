@@ -50,7 +50,13 @@ class EngineTest {
     }
 
     @Test fun neglectTriggersCallThenCareMiss() {
-        val p = baby().copy(stats = Stats(hunger = 5, happy = 5), lastUpdatedMs = 0, pendingCallSinceMs = null)
+        // Observe a full call -> timeout -> care-miss cycle (needs > ATTENTION_TIMEOUT_MIN).
+        // Keep the pet inside one stage across the 90-min window: the baby stage lasts only
+        // BABY_MS (10 min), so evolving mid-window would reset the per-stage care log (misses).
+        val p = baby().copy(
+            stats = Stats(hunger = 5, happy = 5),
+            lastUpdatedMs = 0, stageStartMs = 90 * min, pendingCallSinceMs = null,
+        )
         val sim = CareEngine.advance(p, 90 * min, hourAt = awake, rng = seed())
         assertTrue(sim.events.any { it is DomainEvent.Called })
         assertTrue(sim.events.any { it is DomainEvent.CareMiss })

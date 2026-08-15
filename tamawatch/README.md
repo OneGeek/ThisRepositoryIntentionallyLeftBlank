@@ -76,10 +76,10 @@ The four documents in `docs/` are the source of truth and were produced in seque
 
 This project was assembled in a sandbox **without access to the Android SDK** (the SDK host is blocked by egress policy there), so:
 
-- ✅ **Simulation engine** — compiled with `kotlinc` and **18/18 logic checks pass** on the JVM. This is the game's heart and it is verified.
+- ✅ **Simulation engine** — the full care/economy/evolution core passes its JVM unit suite (`EngineTest`, **13/13**) via `./gradlew :app:testDebugUnitTest`. This is the game's heart and it is verified.
 - ✅ **Assets** — 79 art frame-strips + 30 SFX generated, integrity-checked, and self-validated against the asset manifest.
 - ✅ **Web preview** — JS syntax validated; plays the full loop with the real assets.
-- ⚠️ **Android app layer (Compose UI, Room, Tile, Complication)** — written to standard, current androidx APIs pinned in `app/build.gradle.kts`, but **not compiled in-session** (no SDK). Build it with the steps above; if you bump the pinned androidx versions, the Tile/Complication APIs (the most version-sensitive surfaces) may need a minor adjustment.
+- ✅ **Android app layer (Compose UI, Room, Tile, Complication)** — now compiled against the Android SDK (compile/target 34, min 33). `./gradlew :app:assembleDebug` produces the installable `app-debug.apk`, and `./gradlew :app:assembleRelease` produces an R8-minified, resource-shrunk release APK that passes `lintVitalRelease` cleanly. The release still needs your own `signingConfig` before it can be installed/uploaded.
 
 ## Roadmap (seams left in the architecture)
 

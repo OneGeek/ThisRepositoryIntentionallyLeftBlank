@@ -1,0 +1,17 @@
+# Gradle / build outputs
+.gradle/
+build/
+app/build/
+
+# Local SDK location (machine-specific)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Keystores / signing (never commit secrets)
+*.jks
+*.keystore
+keystore.properties
