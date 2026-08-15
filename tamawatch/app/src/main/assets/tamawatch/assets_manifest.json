@@ -1,0 +1,1270 @@
+{
+ "sounds": {
+  "mus_game_loop": {
+   "file": "mus_game_loop.wav",
+   "len": 4.0,
+   "sr": 22050
+  },
+  "sfx_buy": {
+   "file": "sfx_buy.wav",
+   "len": 0.28,
+   "sr": 22050
+  },
+  "sfx_call": {
+   "file": "sfx_call.wav",
+   "len": 0.62,
+   "sr": 22050
+  },
+  "sfx_cancel": {
+   "file": "sfx_cancel.wav",
+   "len": 0.15,
+   "sr": 22050
+  },
+  "sfx_coin": {
+   "file": "sfx_coin.wav",
+   "len": 0.17,
+   "sr": 22050
+  },
+  "sfx_confirm": {
+   "file": "sfx_confirm.wav",
+   "len": 0.14,
+   "sr": 22050
+  },
+  "sfx_drink": {
+   "file": "sfx_drink.wav",
+   "len": 0.35,
+   "sr": 22050
+  },
+  "sfx_eat": {
+   "file": "sfx_eat.wav",
+   "len": 0.34,
+   "sr": 22050
+  },
+  "sfx_error": {
+   "file": "sfx_error.wav",
+   "len": 0.26,
+   "sr": 22050
+  },
+  "sfx_evolve": {
+   "file": "sfx_evolve.wav",
+   "len": 1.2,
+   "sr": 22050
+  },
+  "sfx_farewell": {
+   "file": "sfx_farewell.wav",
+   "len": 1.5,
+   "sr": 22050
+  },
+  "sfx_flush": {
+   "file": "sfx_flush.wav",
+   "len": 0.5,
+   "sr": 22050
+  },
+  "sfx_game_lose": {
+   "file": "sfx_game_lose.wav",
+   "len": 0.61,
+   "sr": 22050
+  },
+  "sfx_game_start": {
+   "file": "sfx_game_start.wav",
+   "len": 0.28,
+   "sr": 22050
+  },
+  "sfx_game_win": {
+   "file": "sfx_game_win.wav",
+   "len": 0.75,
+   "sr": 22050
+  },
+  "sfx_goal": {
+   "file": "sfx_goal.wav",
+   "len": 0.4,
+   "sr": 22050
+  },
+  "sfx_happy": {
+   "file": "sfx_happy.wav",
+   "len": 0.38,
+   "sr": 22050
+  },
+  "sfx_hatch": {
+   "file": "sfx_hatch.wav",
+   "len": 0.9,
+   "sr": 22050
+  },
+  "sfx_heal": {
+   "file": "sfx_heal.wav",
+   "len": 0.35,
+   "sr": 22050
+  },
+  "sfx_jump": {
+   "file": "sfx_jump.wav",
+   "len": 0.15,
+   "sr": 22050
+  },
+  "sfx_levelup": {
+   "file": "sfx_levelup.wav",
+   "len": 0.36,
+   "sr": 22050
+  },
+  "sfx_miss": {
+   "file": "sfx_miss.wav",
+   "len": 0.25,
+   "sr": 22050
+  },
+  "sfx_pet": {
+   "file": "sfx_pet.wav",
+   "len": 0.16,
+   "sr": 22050
+  },
+  "sfx_refuse": {
+   "file": "sfx_refuse.wav",
+   "len": 0.28,
+   "sr": 22050
+  },
+  "sfx_sad": {
+   "file": "sfx_sad.wav",
+   "len": 0.4,
+   "sr": 22050
+  },
+  "sfx_score": {
+   "file": "sfx_score.wav",
+   "len": 0.15,
+   "sr": 22050
+  },
+  "sfx_select": {
+   "file": "sfx_select.wav",
+   "len": 0.05,
+   "sr": 22050
+  },
+  "sfx_sick": {
+   "file": "sfx_sick.wav",
+   "len": 0.5,
+   "sr": 22050
+  },
+  "sfx_sleep": {
+   "file": "sfx_sleep.wav",
+   "len": 0.8,
+   "sr": 22050
+  },
+  "sfx_talk_react": {
+   "file": "sfx_talk_react.wav",
+   "len": 0.38,
+   "sr": 22050
+  }
+ },
+ "sprites": {
+  "bg_ambient": {
+   "file": "bg_ambient.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_egg": {
+   "file": "bg_egg.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_game_catch": {
+   "file": "bg_game_catch.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_game_guess": {
+   "file": "bg_game_guess.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_game_jump": {
+   "file": "bg_game_jump.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_room_day": {
+   "file": "bg_room_day.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_room_night": {
+   "file": "bg_room_night.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "bg_shop": {
+   "file": "bg_shop.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "cos_bg_beach": {
+   "file": "cos_bg_beach.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "cos_bg_space": {
+   "file": "cos_bg_space.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "cut_evolve": {
+   "file": "cut_evolve.png",
+   "frameH": 96,
+   "frameW": 96,
+   "frames": 4,
+   "tags": {
+    "play": [
+     0,
+     1,
+     2,
+     3
+    ]
+   }
+  },
+  "cut_farewell": {
+   "file": "cut_farewell.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 3,
+   "tags": {
+    "play": [
+     0,
+     1,
+     2
+    ]
+   }
+  },
+  "cut_hatch": {
+   "file": "cut_hatch.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 4,
+   "tags": {
+    "play": [
+     0,
+     1,
+     2,
+     3
+    ]
+   }
+  },
+  "fx_goal": {
+   "file": "fx_goal.png",
+   "frameH": 24,
+   "frameW": 24,
+   "frames": 3,
+   "tags": {
+    "play": [
+     0,
+     1,
+     2
+    ]
+   }
+  },
+  "fx_star": {
+   "file": "fx_star.png",
+   "frameH": 16,
+   "frameW": 16,
+   "frames": 3,
+   "tags": {
+    "twinkle": [
+     0,
+     1,
+     2
+    ]
+   }
+  },
+  "game_arrow_l": {
+   "file": "game_arrow_l.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "game_arrow_r": {
+   "file": "game_arrow_r.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "game_basket": {
+   "file": "game_basket.png",
+   "frameH": 24,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "game_obstacle": {
+   "file": "game_obstacle.png",
+   "frameH": 24,
+   "frameW": 24,
+   "frames": 2,
+   "tags": {
+    "idle": [
+     0,
+     1
+    ]
+   }
+  },
+  "game_treat_bad": {
+   "file": "game_treat_bad.png",
+   "frameH": 20,
+   "frameW": 20,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "game_treat_good": {
+   "file": "game_treat_good.png",
+   "frameH": 20,
+   "frameW": 20,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_app_launcher_bg": {
+   "file": "ic_app_launcher_bg.png",
+   "frameH": 108,
+   "frameW": 108,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_app_launcher_fg": {
+   "file": "ic_app_launcher_fg.png",
+   "frameH": 108,
+   "frameW": 108,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_back": {
+   "file": "ic_back.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_bathroom": {
+   "file": "ic_bathroom.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_confirm": {
+   "file": "ic_confirm.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_discipline": {
+   "file": "ic_discipline.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_feed": {
+   "file": "ic_feed.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_light": {
+   "file": "ic_light.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_medicine": {
+   "file": "ic_medicine.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_notification": {
+   "file": "ic_notification.png",
+   "frameH": 24,
+   "frameW": 24,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_play": {
+   "file": "ic_play.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_settings": {
+   "file": "ic_settings.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_shop": {
+   "file": "ic_shop.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_status": {
+   "file": "ic_status.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_steps": {
+   "file": "ic_steps.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "img_splash": {
+   "file": "img_splash.png",
+   "frameH": 480,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_meal_bowl": {
+   "file": "item_meal_bowl.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_meal_bread": {
+   "file": "item_meal_bread.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_meal_fish": {
+   "file": "item_meal_fish.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_meal_veg": {
+   "file": "item_meal_veg.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_medicine": {
+   "file": "item_medicine.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_snack_cake": {
+   "file": "item_snack_cake.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_snack_candy": {
+   "file": "item_snack_candy.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_snack_icecream": {
+   "file": "item_snack_icecream.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "item_snack_juice": {
+   "file": "item_snack_juice.png",
+   "frameH": 32,
+   "frameW": 32,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ov_call": {
+   "file": "ov_call.png",
+   "frameH": 20,
+   "frameW": 20,
+   "frames": 2,
+   "tags": {
+    "blink": [
+     0,
+     1
+    ]
+   }
+  },
+  "ov_heart_particle": {
+   "file": "ov_heart_particle.png",
+   "frameH": 16,
+   "frameW": 16,
+   "frames": 3,
+   "tags": {
+    "rise": [
+     0,
+     1,
+     2
+    ]
+   }
+  },
+  "ov_note": {
+   "file": "ov_note.png",
+   "frameH": 16,
+   "frameW": 16,
+   "frames": 2,
+   "tags": {
+    "idle": [
+     0,
+     1
+    ]
+   }
+  },
+  "ov_poop": {
+   "file": "ov_poop.png",
+   "frameH": 24,
+   "frameW": 24,
+   "frames": 2,
+   "tags": {
+    "idle": [
+     0,
+     1
+    ]
+   }
+  },
+  "ov_sick_skull": {
+   "file": "ov_sick_skull.png",
+   "frameH": 20,
+   "frameW": 20,
+   "frames": 2,
+   "tags": {
+    "blink": [
+     0,
+     1
+    ]
+   }
+  },
+  "ov_sweat": {
+   "file": "ov_sweat.png",
+   "frameH": 12,
+   "frameW": 12,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ov_zzz": {
+   "file": "ov_zzz.png",
+   "frameH": 24,
+   "frameW": 24,
+   "frames": 2,
+   "tags": {
+    "idle": [
+     0,
+     1
+    ]
+   }
+  },
+  "spr_adult_a": {
+   "file": "spr_adult_a.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_b": {
+   "file": "spr_adult_b.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_c": {
+   "file": "spr_adult_c.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_d": {
+   "file": "spr_adult_d.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_e": {
+   "file": "spr_adult_e.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_f": {
+   "file": "spr_adult_f.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_g": {
+   "file": "spr_adult_g.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_adult_h": {
+   "file": "spr_adult_h.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_baby": {
+   "file": "spr_baby.png",
+   "frameH": 48,
+   "frameW": 48,
+   "frames": 13,
+   "tags": {
+    "call": [
+     12
+    ],
+    "eat": [
+     10,
+     11
+    ],
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "sad": [
+     6
+    ],
+    "sick": [
+     7
+    ],
+    "sleep": [
+     8,
+     9
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_child_a": {
+   "file": "spr_child_a.png",
+   "frameH": 56,
+   "frameW": 56,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_child_b": {
+   "file": "spr_child_b.png",
+   "frameH": 56,
+   "frameW": 56,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_child_c": {
+   "file": "spr_child_c.png",
+   "frameH": 56,
+   "frameW": 56,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_egg": {
+   "file": "spr_egg.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 7,
+   "tags": {
+    "crack": [
+     4,
+     5,
+     6
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "wiggle": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_stageset_adult": {
+   "file": "spr_stageset_adult.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 7,
+   "tags": {
+    "call": [
+     6
+    ],
+    "eat": [
+     4,
+     5
+    ],
+    "sad": [
+     0
+    ],
+    "sick": [
+     1
+    ],
+    "sleep": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_stageset_child": {
+   "file": "spr_stageset_child.png",
+   "frameH": 56,
+   "frameW": 56,
+   "frames": 7,
+   "tags": {
+    "call": [
+     6
+    ],
+    "eat": [
+     4,
+     5
+    ],
+    "sad": [
+     0
+    ],
+    "sick": [
+     1
+    ],
+    "sleep": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_stageset_teen": {
+   "file": "spr_stageset_teen.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 7,
+   "tags": {
+    "call": [
+     6
+    ],
+    "eat": [
+     4,
+     5
+    ],
+    "sad": [
+     0
+    ],
+    "sick": [
+     1
+    ],
+    "sleep": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_teen_a": {
+   "file": "spr_teen_a.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_teen_b": {
+   "file": "spr_teen_b.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_teen_c": {
+   "file": "spr_teen_c.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_teen_d": {
+   "file": "spr_teen_d.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "spr_teen_e": {
+   "file": "spr_teen_e.png",
+   "frameH": 64,
+   "frameW": 64,
+   "frames": 6,
+   "tags": {
+    "happy": [
+     4,
+     5
+    ],
+    "idle": [
+     0,
+     1
+    ],
+    "walk": [
+     2,
+     3
+    ]
+   }
+  },
+  "ui_gp_coin": {
+   "file": "ui_gp_coin.png",
+   "frameH": 18,
+   "frameW": 18,
+   "frames": 2,
+   "tags": {
+    "spin": [
+     0,
+     1
+    ]
+   }
+  },
+  "ui_heart_empty": {
+   "file": "ui_heart_empty.png",
+   "frameH": 20,
+   "frameW": 20,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ui_heart_full": {
+   "file": "ui_heart_full.png",
+   "frameH": 20,
+   "frameW": 20,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ui_selector": {
+   "file": "ui_selector.png",
+   "frameH": 44,
+   "frameW": 44,
+   "frames": 2,
+   "tags": {
+    "pulse": [
+     0,
+     1
+    ]
+   }
+  },
+  "ui_step_shoe": {
+   "file": "ui_step_shoe.png",
+   "frameH": 18,
+   "frameW": 18,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  }
+ },
+ "version": 1
+}
