@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TamaWatch</string>
+    <string name="tile_label">TamaWatch Care</string>
+    <string name="complication_label">TamaWatch</string>
+    <string name="notif_channel_care">Pet care</string>
+    <string name="notif_needs_you">Your Tama needs you!</string>
+
+    <!-- Care ring content descriptions (TalkBack) -->
+    <string name="cd_feed">Feed</string>
+    <string name="cd_light">Toggle light</string>
+    <string name="cd_play">Play a game</string>
+    <string name="cd_bathroom">Clean up</string>
+    <string name="cd_medicine">Give medicine</string>
+    <string name="cd_status">Status</string>
+    <string name="cd_discipline">Discipline</string>
+    <string name="cd_shop">Shop</string>
+    <string name="cd_steps">Steps</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_confirm">Confirm</string>
+    <string name="cd_pet">Pet your Tama</string>
+</resources>
