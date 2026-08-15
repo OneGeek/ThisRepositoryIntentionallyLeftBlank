@@ -29,7 +29,23 @@ cd tamawatch
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Release build (signed): configure a `signingConfig` and run `./gradlew :app:assembleRelease` (or `bundleRelease` for an AAB to upload to the Play Console).
+### Release build (signed)
+
+Signing is wired up but keyless by default. To produce a signed, sideloadable
+release, copy `keystore.properties.template` to `keystore.properties` (git-ignored)
+and point it at your keystore:
+
+```bash
+# create a keystore once:
+keytool -genkeypair -v -keystore tamawatch-release.jks \
+  -alias tamawatch -keyalg RSA -keysize 2048 -validity 10000
+cp keystore.properties.template keystore.properties   # then edit the values
+./gradlew :app:assembleRelease    # -> app/build/outputs/apk/release/app-release.apk (signed)
+./gradlew :app:bundleRelease      # -> app/build/outputs/bundle/release/app-release.aab (Play Console)
+```
+
+Without `keystore.properties`, `assembleRelease` still builds and just emits the
+usual `app-release-unsigned.apk` (install the debug APK to try it on-device).
 
 ### Run the engine tests (pure JVM, no device)
 
