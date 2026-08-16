@@ -50,6 +50,9 @@ fun poseFor(pet: Pet): Pair<String, String> {
 
 private data class RingAction(val icon: String, val label: String, val onGo: () -> Unit, val alert: Boolean = false)
 
+/** Four idle loops; the home pet plays a random one each cycle so it never feels canned. */
+private val IdleVariants = listOf("idle", "idle2", "idle3", "idle4")
+
 @Composable
 fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean) {
     val bg = when {
@@ -108,8 +111,12 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
         val density = LocalDensity.current
         val radiusPx = with(density) { (maxWidth * 0.40f).toPx() }
 
+        // Lay the actions on a horseshoe with a gap at the top so no button sits
+        // under the status meters at 12 o'clock.
+        val gapDeg = 90.0
+        val stepDeg = (360.0 - gapDeg) / (actions.size - 1)
         actions.forEachIndexed { i, a ->
-            val ang = Math.toRadians((-90 + i * (360.0 / actions.size)))
+            val ang = Math.toRadians(-90.0 + gapDeg / 2 + i * stepDeg)
             val x = (radiusPx * cos(ang)).roundToInt()
             val y = (radiusPx * sin(ang)).roundToInt()
             Box(
@@ -148,7 +155,8 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                PixelSprite(id, tag, 3, Modifier.fillMaxSize())
+                if (tag == "idle") PixelIdle(id, IdleVariants, 3, Modifier.fillMaxSize())
+                else PixelSprite(id, tag, 3, Modifier.fillMaxSize())
                 if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
                 if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
                 if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -47,6 +48,29 @@ fun PixelSprite(id: String, tag: String = "idle", fps: Int = 3, modifier: Modifi
         }
     }
     PixelFrame(id, frames.getOrElse(i) { 0 }, modifier)
+}
+
+/**
+ * Plays an idle animation but reshuffles between several variant tags, picking a
+ * new one at random after each full loop — so the pet doesn't repeat one canned
+ * idle forever. Honors reduce-motion (freezes on the first variant's frame 0).
+ */
+@Composable
+fun PixelIdle(id: String, variants: List<String>, fps: Int = 3, modifier: Modifier = Modifier) {
+    val bank = LocalSprites.current
+    val reduce = LocalReduceMotion.current
+    var tag by remember(id) { mutableStateOf(variants.first()) }
+    var i by remember(id) { mutableIntStateOf(0) }
+    LaunchedEffect(id, reduce) {
+        if (reduce) { tag = variants.first(); i = 0; return@LaunchedEffect }
+        while (true) {
+            val frames = bank.tag(id, tag)
+            for (f in frames.indices) { i = f; delay(1000L / fps) }
+            tag = variants.random()          // next loop is a random alternate
+            i = 0
+        }
+    }
+    PixelFrame(id, bank.tag(id, tag).getOrElse(i) { 0 }, modifier)
 }
 
 @Composable

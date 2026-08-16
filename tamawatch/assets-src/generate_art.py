@@ -212,10 +212,21 @@ def _motion(anim, t, sp):
     m = dict(bob=0.0, lean=0.0, sqx=1.0, sqy=1.0, feat_dy=0.0,
              lift_l=0, lift_r=0, arms="side", eyes="open", mouth="smile",
              recolor=None)
-    if anim == "idle":
+    if anim == "idle":                       # breathe + a single blink
         b = math.sin(ph)
         m.update(sqy=1 + 0.05 * b, sqx=1 - 0.035 * b, bob=-1 - 0.6 * (b + 1),
                  feat_dy=-0.8 * b, eyes=("closed" if 0.70 <= t < 0.86 else "open"))
+    elif anim == "idle2":                     # gentle side-to-side sway
+        s = math.sin(ph)
+        m.update(lean=2.4 * s, sqy=1 + 0.03 * math.sin(ph * 2), feat_dy=-1.0 * s)
+    elif anim == "idle3":                     # a little bounce
+        jump = math.sin(math.pi * t)
+        m.update(bob=-6 * jump, sqy=1 + 0.06 * jump, sqx=1 - 0.05 * jump,
+                 feat_dy=-1.6 * jump, eyes=("happy" if jump > 0.6 else "open"))
+    elif anim == "idle4":                     # feature wag + a quick peek-blink
+        wag = math.sin(ph * 2)
+        m.update(lean=1.2 * wag, feat_dy=-3.0 * wag, sqy=1 + 0.02 * math.sin(ph),
+                 eyes=("closed" if 0.45 <= t < 0.6 else "open"))
     elif anim == "walk":
         s = math.sin(ph)
         m.update(bob=-abs(s) * 2, lean=1.2 * s, feat_dy=-0.6 * s,
@@ -320,11 +331,13 @@ def draw_creature(size, sp, anim="idle", t=0.0):
 
 # Frames per animation loop. More frames -> smoother motion; the renderer
 # cycles any tag's frame list, so counts are free (validation checks IDs only).
-ANIM_FRAMES = {"idle": 6, "walk": 6, "happy": 6, "sad": 2, "sick": 2,
+ANIM_FRAMES = {"idle": 6, "idle2": 5, "idle3": 5, "idle4": 5,
+               "walk": 6, "happy": 6, "sad": 2, "sick": 2,
                "sleep": 4, "eat": 4, "call": 4}
-ACTIVE_ANIMS = ["idle", "walk", "happy"]                                  # child/teen/adult sheets
+IDLE_ANIMS = ["idle", "idle2", "idle3", "idle4"]                          # four alternates
+ACTIVE_ANIMS = IDLE_ANIMS + ["walk", "happy"]                            # child/teen/adult sheets
 STAGESET_ANIMS = ["sad", "sick", "sleep", "eat", "call"]                  # shared per-stage states
-BABY_ANIMS = ["idle", "walk", "happy", "sad", "sick", "sleep", "eat", "call"]
+BABY_ANIMS = ACTIVE_ANIMS + ["sad", "sick", "sleep", "eat", "call"]
 
 SIZES = {"baby": 48, "child": 56, "teen": 64, "adult": 64}
 

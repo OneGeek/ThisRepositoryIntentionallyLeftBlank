@@ -117,8 +117,10 @@ def care_ring(base, sel=0):
              "ic_status", "ic_shop", "ic_steps", "ic_discipline", "ic_settings"]
     alerts = {0}  # Feed alerting (hungry)
     r = 0.40 * W
+    gap, n = 90.0, len(icons)                      # leave a gap at the top for the status
+    step = (360.0 - gap) / (n - 1)
     for i, ic in enumerate(icons):
-        ang = math.radians(-90 + i * 36)
+        ang = math.radians(-90 + gap / 2 + i * step)
         cx, cy = W / 2 + r * math.cos(ang), W / 2 + r * math.sin(ang)
         selected = (i == sel)
         sz = 44 if selected else 34
