@@ -19,13 +19,13 @@ import kotlinx.coroutines.delay
 val LocalSprites = staticCompositionLocalOf<SpriteBank> { error("SpriteBank not provided") }
 val LocalReduceMotion = staticCompositionLocalOf { false }
 
-/** Draws a pixel-art frame with nearest-neighbor scaling. */
+/** Draws an art frame with smooth (bilinear) scaling for clean, anti-aliased lines. */
 @Composable
 fun PixelFrame(id: String, frameIndex: Int = 0, modifier: Modifier = Modifier) {
     val bank = LocalSprites.current
     val img = bank.frame(id, frameIndex) ?: return
     Image(
-        painter = BitmapPainter(img, filterQuality = FilterQuality.None),
+        painter = BitmapPainter(img, filterQuality = FilterQuality.High),
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = modifier,

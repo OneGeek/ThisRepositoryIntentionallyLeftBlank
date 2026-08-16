@@ -1,27 +1,114 @@
-"""TamaWatch art generator. Emits palette-limited RGBA PNG frame-strips for
-every art ID in the Authoritative Generation Set (docs/04) and returns a
-manifest fragment {id: {file, frameW, frameH, frames, tags}}.
+"""TamaWatch art generator. Emits RGBA PNG frame-strips for every art ID in the
+Authoritative Generation Set (docs/04) and returns a manifest fragment
+{id: {file, frameW, frameH, frames, tags}}.
 
-Pixel art is authored at the listed cell sizes and shipped un-dpi-scaled
-(drawable-nodpi); the app scales it nearest-neighbor for the chunky look."""
+Art is drawn on a supersampled canvas through a coordinate-scaling proxy and
+downsampled with LANCZOS, so shapes come out as clean anti-aliased lines; the
+app then scales the result smoothly (bilinear) instead of nearest-neighbor."""
 
 import os
 import math
+import functools
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import palette as P
 
 MANIFEST = {}
 
+# --- clean-line rendering ----------------------------------------------------
+# Draw at DRAW x the logical cell size, then downsample by SS -> stored at UP x.
+# The SS-factor downsample is what anti-aliases the edges (clean lines).
+SS = 3            # antialias supersample (draw big, downsample smooth)
+UP = 4            # stored resolution multiplier over the logical cell size
+DRAW = SS * UP    # coordinate scale applied while drawing cell-based sprites
 
-# ----------------------------------------------------------------------------- helpers
-def cell(w, h):
-    img = Image.new("RGBA", (w, h), P.TRANSPARENT)
-    return img, ImageDraw.Draw(img)
+
+@functools.lru_cache(maxsize=None)
+def _sfont(px):
+    px = max(6, int(px))
+    for p in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+              "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"):
+        if os.path.exists(p):
+            return ImageFont.truetype(p, px)
+    return ImageFont.load_default()
 
 
-def strip(frames, tags, id_, out_dir):
-    """Lay frames horizontally into one PNG strip and record the manifest."""
+class _SDraw:
+    """Wraps an ImageDraw and multiplies every coordinate + stroke width by a
+    scale, so drawing code written in 'logical' pixels renders supersampled.
+    joint='curve' + rounded stroke ends keep lines clean, not blocky."""
+
+    def __init__(self, draw, scale):
+        self._d = draw
+        self._s = scale
+
+    def _pts(self, xy):
+        s = self._s
+        if xy and isinstance(xy[0], (tuple, list)):
+            return [tuple(v * s for v in p) for p in xy]
+        return [v * s for v in xy]
+
+    def _w(self, width):
+        return max(1, int(round(width * self._s)))
+
+    def line(self, xy, fill=None, width=1, joint="curve"):
+        self._d.line(self._pts(xy), fill=fill, width=self._w(width), joint=joint)
+
+    def ellipse(self, xy, fill=None, outline=None, width=1):
+        self._d.ellipse(self._pts(xy), fill=fill, outline=outline, width=self._w(width))
+
+    def rectangle(self, xy, fill=None, outline=None, width=1):
+        self._d.rectangle(self._pts(xy), fill=fill, outline=outline, width=self._w(width))
+
+    def rounded_rectangle(self, xy, radius=0, fill=None, outline=None, width=1):
+        self._d.rounded_rectangle(self._pts(xy), radius=radius * self._s,
+                                  fill=fill, outline=outline, width=self._w(width))
+
+    def polygon(self, xy, fill=None, outline=None, width=1):
+        try:
+            self._d.polygon(self._pts(xy), fill=fill, outline=outline, width=self._w(width))
+        except TypeError:
+            self._d.polygon(self._pts(xy), fill=fill, outline=outline)
+
+    def arc(self, xy, start, end, fill=None, width=1):
+        self._d.arc(self._pts(xy), start, end, fill=fill, width=self._w(width))
+
+    def chord(self, xy, start, end, fill=None, outline=None, width=1):
+        self._d.chord(self._pts(xy), start, end, fill=fill, outline=outline, width=self._w(width))
+
+    def point(self, xy, fill=None):
+        self._d.point(self._pts(xy), fill=fill)
+
+    def text(self, xy, s, fill=None, font=None, **kw):
+        f = font or _sfont(round(11 * self._s))
+        self._d.text((xy[0] * self._s, xy[1] * self._s), s, fill=fill, font=f, **kw)
+
+
+def cell(w, h, scale=DRAW):
+    """A supersampled transparent canvas + a scaling draw proxy."""
+    img = Image.new("RGBA", (w * scale, h * scale), P.TRANSPARENT)
+    return img, _SDraw(ImageDraw.Draw(img), scale)
+
+
+def _paste(base, sub, x, y, scale=DRAW):
+    """alpha-composite a supersampled sub-image at a logical (x, y)."""
+    base.alpha_composite(sub, (int(x * scale), int(y * scale)))
+
+
+def _fill_vgrad(img, top, bot):
+    """Fill an existing RGBA image with a smooth vertical gradient (numpy)."""
+    w, h = img.size
+    ys = np.linspace(0.0, 1.0, h, dtype=np.float32)
+    col = _rgb(top)[None, :] + (_rgb(bot) - _rgb(top))[None, :] * ys[:, None]
+    arr = np.clip(np.repeat(col[:, None, :], w, axis=1), 0, 255).astype(np.uint8)
+    a = np.full((h, w, 1), 255, np.uint8)
+    img.paste(Image.fromarray(np.concatenate([arr, a], axis=2), "RGBA"), (0, 0))
+
+
+def strip(frames, tags, id_, out_dir, ss=SS):
+    """Downsample each supersampled frame (LANCZOS) then lay them into one PNG."""
+    if ss > 1:
+        frames = [f.resize((max(1, f.width // ss), max(1, f.height // ss)), Image.LANCZOS) for f in frames]
     fw, fh = frames[0].size
     sheet = Image.new("RGBA", (fw * len(frames), fh), P.TRANSPARENT)
     for i, f in enumerate(frames):
@@ -39,27 +126,6 @@ def ellipse(d, cx, cy, rx, ry, fill, outline=P.INK, ow=1):
 
 def dot(d, x, y, r, fill):
     d.ellipse([x - r, y - r, x + r, y + r], fill=fill)
-
-
-# 4x4 ordered-dither matrix — used for palette-pure (1-bit) soft shadows so a
-# grounding shadow reads correctly over any background without adding colors.
-_BAYER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
-
-
-def dither_ellipse(img, cx, cy, rx, ry, color, coverage=0.4):
-    """Stamp an ordered-dithered filled ellipse straight into the pixel buffer,
-    only where the pixel is still transparent (so it stays behind the body)."""
-    if rx <= 0 or ry <= 0:
-        return
-    px = img.load()
-    w, h = img.size
-    thr = coverage * 16.0
-    for y in range(max(0, cy - ry), min(h, cy + ry + 1)):
-        ny = (y - cy) / ry
-        for x in range(max(0, cx - rx), min(w, cx + rx + 1)):
-            nx = (x - cx) / rx
-            if nx * nx + ny * ny <= 1.0 and _BAYER4[y & 3][x & 3] < thr and px[x, y][3] == 0:
-                px[x, y] = color
 
 
 def _draw_eyes(d, cx, ey, ex, size, state):
@@ -197,10 +263,13 @@ def draw_creature(size, sp, anim="idle", t=0.0):
     body = m["recolor"] or sp["body"]
     outline = P.INK
 
-    # grounding shadow — shrinks as the body lifts off (jumps), grounding motion
+    # soft grounding shadow — a flat translucent ellipse (smooth once downsampled);
+    # shrinks as the body lifts off (jumps) so motion stays grounded
     lift = max(0.0, -m["bob"])
-    dither_ellipse(img, cx, baseline + 3, max(4, int(rx * (0.92 - 0.03 * lift))),
-                   max(2, rx // 5), P.INK, 0.4)
+    sh_rx = max(4, int(rx * (0.92 - 0.03 * lift)))
+    sh_ry = max(2, rx // 5)
+    d.ellipse([cx - sh_rx, baseline + 3 - sh_ry, cx + sh_rx, baseline + 3 + sh_ry],
+              fill=(0, 0, 0, 70), outline=None)
 
     # feet (planted; alternate lift on walk)
     foot_dx = int(rx * 0.55)
@@ -486,13 +555,10 @@ def gen_ui(out):
 
     # launcher fg 108x108 (creature) + bg 108x108
     img, d = cell(108, 108)
-    baby = draw_creature(72, SPECIES["baby"], "happy", 0.5).resize((84, 84), Image.NEAREST)
-    img.paste(baby, (12, 14), baby)
+    _paste(img, draw_creature(84, SPECIES["baby"], "happy", 0.5), 12, 14)
     strip([img], {"idle": [0]}, "ic_app_launcher_fg", out)
     img, d = cell(108, 108)
-    for y in range(108):
-        c = P.lighter(P.LCD_L, y / 300)
-        d.line([0, y, 108, y], fill=c)
+    _fill_vgrad(img, P.LCD_L, P.lighter(P.LCD_L, 0.4))
     strip([img], {"idle": [0]}, "ic_app_launcher_bg", out)
 
     # notification 24x24 monochrome (heart)
@@ -500,60 +566,52 @@ def gen_ui(out):
     d.polygon([(12, 20), (3, 10), (6, 5), (12, 9), (18, 5), (21, 10), (12, 20)], fill=P.WHITE)
     strip([img], {"idle": [0]}, "ic_notification", out)
 
-    # splash 480x480
-    img, d = cell(480, 480)
-    for y in range(480):
-        d.line([0, y, 480, y], fill=P.lighter(P.LCD_L, y / 700))
-    big = draw_creature(160, SPECIES["baby"], "happy", 0.5).resize((240, 240), Image.NEAREST)
-    img.paste(big, (120, 120), big)
-    d.text((196, 380), "TamaWatch", fill=P.INK)
-    strip([img], {"idle": [0]}, "img_splash", out)
+    # splash 480x480 (native store res; smooth gradient + composited creature + title)
+    spl = Image.new("RGBA", (480, 480), (0, 0, 0, 255))
+    _fill_vgrad(spl, P.LCD_L, P.lighter(P.LCD_L, 0.6))
+    big = draw_creature(240, SPECIES["baby"], "happy", 0.5).resize((240, 240), Image.LANCZOS)
+    spl.alpha_composite(big, (120, 108))
+    sd = ImageDraw.Draw(spl)
+    f = _sfont(40)
+    tw = sd.textlength("TamaWatch", font=f)
+    sd.text(((480 - tw) / 2, 384), "TamaWatch", font=f, fill=P.INK)
+    strip([spl], {"idle": [0]}, "img_splash", out, ss=1)
 
 
 # ----------------------------------------------------------------------------- backgrounds
 BG = 480
 WOOD = (196, 150, 96, 255)
 
-# 8x8 ordered-dither thresholds, centered on 0 (~ -0.5..0.5).
-_BAYER8 = np.array([
-    [0, 32, 8, 40, 2, 34, 10, 42], [48, 16, 56, 24, 50, 18, 58, 26],
-    [12, 44, 4, 36, 14, 46, 6, 38], [60, 28, 52, 20, 62, 30, 54, 22],
-    [3, 35, 11, 43, 1, 33, 9, 41], [51, 19, 59, 27, 49, 17, 57, 25],
-    [15, 47, 7, 39, 13, 45, 5, 37], [63, 31, 55, 23, 61, 29, 53, 21],
-], dtype=np.float32) / 64.0 - 0.5
-
 
 def _rgb(c):
     return np.array(c[:3], dtype=np.float32)
 
 
-def _vgrad(top, bot, y0, y1):
-    ys = np.clip((np.arange(BG, dtype=np.float32) - y0) / max(1.0, y1 - y0), 0.0, 1.0)
-    return _rgb(top)[None, :] + (_rgb(bot) - _rgb(top))[None, :] * ys[:, None]   # (BG,3)
+def _scene(sky_top, sky_bot, floor_top=None, floor_bot=None, horizon=None, vignette=0.45):
+    """Smooth (anti-aliased) RGBA background with an optional floor plane, built
+    supersampled at BG*SS and returned with a scaling draw proxy so props drawn
+    on top are anti-aliased too. strip() downsamples it back to BG."""
+    S = BG * SS
 
+    def vgrad(top, bot, y0, y1):
+        ys = np.clip((np.arange(S, dtype=np.float32) - y0) / max(1.0, y1 - y0), 0.0, 1.0)
+        return _rgb(top)[None, :] + (_rgb(bot) - _rgb(top))[None, :] * ys[:, None]
 
-def _scene(sky_top, sky_bot, floor_top=None, floor_bot=None, horizon=None,
-           vignette=0.45, dither=16.0):
-    """Dithered, vignetted RGBA background with an optional floor plane. Returns
-    (image, draw) so props can be drawn crisply on top of the textured base."""
-    end = horizon if (floor_top is not None and horizon) else BG
-    arr = np.repeat(_vgrad(sky_top, sky_bot, 0, end)[:, None, :], BG, axis=1)   # (BG,BG,3)
+    hz = int(horizon * SS) if (floor_top is not None and horizon) else S
+    arr = np.repeat(vgrad(sky_top, sky_bot, 0, hz)[:, None, :], S, axis=1)
     if floor_top is not None and horizon:
-        fcol = _vgrad(floor_top, floor_bot or P.darker(floor_top, 0.72), horizon, BG)
-        arr[horizon:] = np.repeat(fcol[:, None, :], BG, axis=1)[horizon:]
-    if dither:                       # hide banding + add a subtle retro texture
-        field = np.tile(_BAYER8, ((BG + 7) // 8, (BG + 7) // 8))[:BG, :BG]
-        arr = arr + field[:, :, None] * dither
+        fcol = vgrad(floor_top, floor_bot or P.darker(floor_top, 0.72), hz, S)
+        arr[hz:] = np.repeat(fcol[:, None, :], S, axis=1)[hz:]
     if vignette > 0:                 # frame the round display, pop the pet
-        yy, xx = np.mgrid[0:BG, 0:BG].astype(np.float32)
-        c = (BG - 1) / 2.0
-        r = np.sqrt((xx - c) ** 2 + (yy - c) ** 2) / (BG / 2.0)
+        yy, xx = np.mgrid[0:S, 0:S].astype(np.float32)
+        c = (S - 1) / 2.0
+        r = np.sqrt((xx - c) ** 2 + (yy - c) ** 2) / (S / 2.0)
         t = np.clip((r - 0.55) / 0.5, 0.0, 1.0)
         arr = arr * (1.0 - vignette * (t * t * (3 - 2 * t)))[:, :, None]
     arr = np.clip(arr, 0, 255).astype(np.uint8)
-    rgba = np.concatenate([arr, np.full((BG, BG, 1), 255, np.uint8)], axis=2)
+    rgba = np.concatenate([arr, np.full((S, S, 1), 255, np.uint8)], axis=2)
     img = Image.fromarray(rgba, "RGBA")
-    return img, ImageDraw.Draw(img)
+    return img, _SDraw(ImageDraw.Draw(img), SS)
 
 
 def _stars(d, n, ymax=BG, bright=P.WHITE):
@@ -651,8 +709,8 @@ def gen_backgrounds(out):
                     floor_top=P.lighter(P.CREAM, 0.1), floor_bot=P.darker(P.CREAM, 0.8), horizon=350)
     finish("bg_game_catch", img, d, None)
 
-    # Always-on / ambient — near-black, flat, low power (no vignette/dither)
-    img, d = _scene((0, 0, 0, 255), (8, 10, 20, 255), vignette=0.0, dither=0.0)
+    # Always-on / ambient — near-black, flat, low power (no vignette)
+    img, d = _scene((0, 0, 0, 255), (8, 10, 20, 255), vignette=0.0)
     finish("bg_ambient", img, d, lambda d: _stars(d, 10, bright=(60, 64, 96, 255)))
 
     # Beach cosmetic — sky, sea band, sand, sun, cloud
@@ -739,7 +797,7 @@ def gen_cutscene(out):
                 d.line([24 + n * 6, 24, 30 + n * 6, 34], fill=P.INK, width=2)
         else:
             b = draw_creature(48, SPECIES["baby"], "happy", 0.5)
-            img.paste(b, (8, 8), b)
+            _paste(img, b, 8, 8)
             if k == 3:
                 for a in range(0, 360, 45):
                     import math
@@ -770,7 +828,7 @@ def gen_cutscene(out):
         alpha = [200, 120, 60][k]
         b = draw_creature(48, SPECIES["adult_a"], "sleep", 0.25)
         b.putalpha(b.getchannel("A").point(lambda a: min(a, alpha)))
-        img.paste(b, (8, 8 - k * 3), b)
+        _paste(img, b, 8, 8 - k * 3)
         dot(d, 32, 10 - k * 2, 2 + k, P.YELLOW)
         fs.append(img)
     strip(fs, {"play": [0, 1, 2]}, "cut_farewell", out)

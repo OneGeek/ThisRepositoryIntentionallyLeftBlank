@@ -45,7 +45,7 @@ def main():
     background:linear-gradient(145deg,#3a3f52,#14161f);padding:14px;
     box-shadow:0 18px 50px rgba(0,0,0,.6), inset 0 2px 6px rgba(255,255,255,.08);position:relative;}
   .bezel::after{content:"";position:absolute;inset:14px;border-radius:50%;box-shadow:inset 0 0 0 3px rgba(0,0,0,.5);pointer-events:none;}
-  canvas{width:100%;height:100%;border-radius:50%;display:block;image-rendering:pixelated;background:#111;cursor:pointer;}
+  canvas{width:100%;height:100%;border-radius:50%;display:block;image-rendering:auto;background:#111;cursor:pointer;}
   .hint{font-size:12px;color:#8b93a7;max-width:480px;text-align:center;line-height:1.5;}
   .bar{display:flex;gap:8px;align-items:center;}
   button{background:#232838;color:#dfe6f2;border:1px solid #3a4055;border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;}

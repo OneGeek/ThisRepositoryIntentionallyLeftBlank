@@ -6,7 +6,7 @@
 (function () {
   const cv = document.getElementById('screen');
   const ctx = cv.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true;
   const W = 480, H = 480, CX = 240, CY = 240;
 
   // ---- assets

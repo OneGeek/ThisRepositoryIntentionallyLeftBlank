@@ -47,7 +47,7 @@ def stamp(base, im, cx, cy, size=None, sid_tag=None):
     (nearest-neighbor to keep the pixel look). Clips at the canvas edge."""
     if size:
         s = size / max(im.width, im.height)
-        im = im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.NEAREST)
+        im = im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.LANCZOS)
     base.paste(im, (round(cx - im.width / 2), round(cy - im.height / 2)), im)
 
 
