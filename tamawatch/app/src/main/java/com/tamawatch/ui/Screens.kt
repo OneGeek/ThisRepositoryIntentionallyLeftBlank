@@ -2,6 +2,7 @@ package com.tamawatch.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -111,13 +112,22 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
             Box(
                 Modifier
                     .offset { IntOffset(x, y) }
-                    .size(if (i == sel) 38.dp else 30.dp)
+                    .size(if (i == sel) 40.dp else 32.dp)
                     .clickable { a.onGo() },
                 contentAlignment = Alignment.Center,
             ) {
                 if (i == sel) PixelSprite("ui_selector", "pulse", 3, Modifier.fillMaxSize())
-                if (a.alert) Box(Modifier.matchParentSize().clip(CircleShape).background(Color(0x55DF3E3E)))
-                PixelFrame(a.icon, 0, Modifier.size(if (i == sel) 22.dp else 18.dp))
+                // Icons are self-contained colored chips, so they read on any background.
+                PixelFrame(a.icon, 0, Modifier.size(if (i == sel) 34.dp else 27.dp))
+                // Attention badge: a small red dot (an opaque chip would hide a wash).
+                if (a.alert) Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .size(11.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFDF3E3E))
+                        .border(1.5.dp, Color.White, CircleShape),
+                )
             }
         }
 

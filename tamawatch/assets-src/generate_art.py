@@ -454,47 +454,89 @@ def _icon(sizepx=40):
 
 
 def gen_icons(out):
-    ic = P.WHITE  # authored white; app tints
-    defs = {}
+    w = P.WHITE
 
-    def add(name, drawer):
+    def add(name, drawer):                          # plain transparent-cell icon (meter points)
         img, d = _icon()
         drawer(d)
         strip([img], {"idle": [0]}, name, out)
 
-    add("ic_feed", lambda d: (d.ellipse([10, 14, 30, 32], outline=ic, width=3),
-                              d.line([14, 8, 14, 16], fill=ic, width=2),
-                              d.line([18, 8, 18, 16], fill=ic, width=2),
-                              d.line([22, 8, 22, 16], fill=ic, width=2)))
-    add("ic_light", lambda d: (d.ellipse([13, 8, 27, 22], outline=ic, width=3),
-                               d.rectangle([16, 22, 24, 28], outline=ic, width=2),
-                               [d.line([20, 4, 20, 1], fill=ic, width=2)]))
-    add("ic_play", lambda d: d.polygon([(14, 10), (14, 30), (30, 20)], outline=ic, width=1, fill=ic))
-    add("ic_bathroom", lambda d: (d.arc([10, 12, 30, 30], 0, 180, fill=ic, width=3),
-                                  d.line([10, 20, 30, 20], fill=ic, width=3),
-                                  d.line([20, 20, 20, 8], fill=ic, width=3)))
-    add("ic_medicine", lambda d: (d.line([10, 30, 30, 10], fill=ic, width=6),
-                                  d.ellipse([24, 6, 34, 16], outline=ic, width=2)))
-    add("ic_status", lambda d: (d.rectangle([10, 8, 30, 32], outline=ic, width=3),
-                                d.line([14, 14, 26, 14], fill=ic, width=2),
-                                d.line([14, 20, 26, 20], fill=ic, width=2),
-                                d.line([14, 26, 22, 26], fill=ic, width=2)))
-    add("ic_discipline", lambda d: (d.line([8, 32, 20, 12], fill=ic, width=3),
-                                    d.polygon([(18, 8), (28, 14), (22, 20), (14, 14)], outline=ic, width=2)))
-    add("ic_shop", lambda d: (d.polygon([(8, 14), (32, 14), (28, 32), (12, 32)], outline=ic, width=3),
-                              d.arc([13, 6, 27, 20], 180, 360, fill=ic, width=2)))
-    add("ic_steps", lambda d: (d.ellipse([10, 8, 20, 20], outline=ic, width=2),
-                               d.ellipse([20, 20, 30, 32], outline=ic, width=2)))
-    add("ic_settings", lambda d: (d.ellipse([13, 13, 27, 27], outline=ic, width=3),
-                                  [d.line([20, 6, 20, 12], fill=ic, width=2),
-                                   d.line([20, 28, 20, 34], fill=ic, width=2),
-                                   d.line([6, 20, 12, 20], fill=ic, width=2),
-                                   d.line([28, 20, 34, 20], fill=ic, width=2)]))
-    add("ic_back", lambda d: (d.line([12, 20, 28, 20], fill=ic, width=3),
-                              d.line([12, 20, 20, 12], fill=ic, width=3),
-                              d.line([12, 20, 20, 28], fill=ic, width=3)))
-    add("ic_confirm", lambda d: (d.line([10, 20, 18, 28], fill=ic, width=4),
-                                 d.line([18, 28, 32, 10], fill=ic, width=4)))
+    def chip_icon(name, color, glyph):
+        """A colored circular 'button' with a clean white glyph — legible on any
+        background (light room, dark night, shop) without relying on a tint."""
+        img, d = _icon()
+        d.ellipse([3, 3, 37, 37], fill=color, outline=P.INK, width=2)
+        glyph(d)
+        strip([img], {"idle": [0]}, name, out)
+
+    def g_feed(d):
+        d.chord([9, 15, 31, 32], 0, 180, fill=w)                      # bowl
+        d.rectangle([7, 15, 33, 18], fill=w)                          # rim
+        for sx in (14, 20, 26):
+            d.line([sx, 7, sx, 12], fill=w, width=2)                  # steam
+
+    def g_light(d):
+        d.ellipse([13, 8, 27, 22], fill=w)                            # bulb
+        d.rectangle([17, 21, 23, 28], fill=w)                         # base
+        d.line([20, 2, 20, 6], fill=w, width=2)
+        d.line([8, 12, 11, 14], fill=w, width=2)
+        d.line([29, 12, 32, 14], fill=w, width=2)
+
+    def g_play(d):
+        d.polygon([(15, 11), (15, 29), (31, 20)], fill=w)
+
+    def g_clean(d):                                                   # water drop + sparkle
+        d.polygon([(20, 8), (12, 20), (28, 20)], fill=w)
+        d.ellipse([12, 16, 28, 30], fill=w)
+        d.line([29, 8, 29, 13], fill=w, width=2)
+        d.line([27, 10, 31, 10], fill=w, width=2)
+
+    def g_medicine(d):                                               # medical cross
+        d.rounded_rectangle([17, 8, 23, 32], radius=2, fill=w)
+        d.rounded_rectangle([8, 17, 32, 23], radius=2, fill=w)
+
+    def g_status(d):                                                 # clipboard / list
+        d.rounded_rectangle([11, 9, 29, 32], radius=3, fill=w, outline=P.INK, width=1)
+        d.rounded_rectangle([16, 6, 24, 11], radius=2, fill=w, outline=P.INK, width=1)
+        for yy in (16, 21, 26):
+            d.line([15, yy, 25, yy], fill=P.INK, width=2)
+
+    def g_disc(d):                                                   # exclamation (scold)
+        d.rounded_rectangle([17, 7, 23, 24], radius=3, fill=w)
+        d.ellipse([17, 27, 23, 33], fill=w)
+
+    def g_shop(d):                                                   # shopping bag
+        d.polygon([(11, 15), (29, 15), (31, 32), (9, 32)], fill=w)
+        d.arc([14, 7, 26, 20], 180, 360, fill=w, width=3)
+
+    def g_steps(d):                                                  # side-view sneaker
+        d.polygon([(9, 26), (9, 18), (16, 16), (24, 20), (31, 22), (31, 26)], fill=w, outline=P.INK, width=1)
+        d.line([9, 28, 31, 28], fill=w, width=3)
+
+    def g_settings(d):                                              # three sliders
+        for i, yy in enumerate((13, 20, 27)):
+            d.line([9, yy, 31, yy], fill=w, width=3)
+            kx = (14, 25, 18)[i]
+            d.ellipse([kx - 3, yy - 3, kx + 3, yy + 3], fill=w, outline=P.INK, width=1)
+
+    def g_back(d):
+        d.line([25, 10, 14, 20, 25, 30], fill=w, width=4)
+
+    def g_confirm(d):
+        d.line([11, 21, 18, 28, 30, 11], fill=w, width=4)
+
+    chip_icon("ic_feed", (232, 120, 72, 255), g_feed)
+    chip_icon("ic_light", (230, 170, 50, 255), g_light)
+    chip_icon("ic_play", (90, 175, 100, 255), g_play)
+    chip_icon("ic_bathroom", (70, 140, 205, 255), g_clean)
+    chip_icon("ic_medicine", (223, 62, 62, 255), g_medicine)
+    chip_icon("ic_status", (150, 110, 195, 255), g_status)
+    chip_icon("ic_discipline", (210, 120, 70, 255), g_disc)
+    chip_icon("ic_shop", (60, 160, 165, 255), g_shop)
+    chip_icon("ic_steps", (80, 150, 215, 255), g_steps)
+    chip_icon("ic_settings", (120, 120, 132, 255), g_settings)
+    chip_icon("ic_back", (96, 102, 116, 255), g_back)
+    chip_icon("ic_confirm", (80, 180, 110, 255), g_confirm)
     # Meter "points", Minecraft-style: each unit in a meter IS its icon, full or
     # spent. Hunger = meat-shank, Happy = smiley; the *_empty variants are dimmed
     # so a row reads as filled/unfilled points with no text labels.

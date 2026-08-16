@@ -121,13 +121,14 @@ def care_ring(base, sel=0):
         ang = math.radians(-90 + i * 36)
         cx, cy = W / 2 + r * math.cos(ang), W / 2 + r * math.sin(ang)
         selected = (i == sel)
+        sz = 44 if selected else 34
         if selected:
-            sprite(base, "ui_selector", cx, cy, 46)
-        if i in alerts:
-            ov = Image.new("RGBA", (44, 44), (0, 0, 0, 0))
-            ImageDraw.Draw(ov).ellipse([0, 0, 43, 43], fill=(223, 62, 62, 90))
-            base.paste(ov, (round(cx - 22), round(cy - 22)), ov)
-        sprite(base, ic, cx, cy, 24 if selected else 20)
+            sprite(base, "ui_selector", cx, cy, 52)
+        sprite(base, ic, cx, cy, sz)
+        if i in alerts:                        # small red badge dot (top-right)
+            bx, by = cx + sz * 0.30, cy - sz * 0.30
+            ImageDraw.Draw(base).ellipse([bx - 7, by - 7, bx + 7, by + 7],
+                                         fill=(223, 62, 62, 255), outline=(255, 255, 255, 255), width=2)
     return ["Feed", "Play", "Clean", "Medicine", "Lights", "Status", "Shop",
             "Steps", "Scold", "Settings"][sel]
 
