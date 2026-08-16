@@ -87,19 +87,24 @@ def hearts(base, x, y, filled, size=26, gap=4):
     return x + 4 * (size + gap)
 
 
+def icon_meter(base, x, y, full, empty, filled, count=4, size=28, gap=5):
+    """Minecraft-style: each point in the meter is its icon (colored=filled,
+    dimmed=empty)."""
+    for i in range(count):
+        sprite(base, full if i < filled else empty, x + i * (size + gap) + size / 2, y + size / 2, size)
+
+
 def meters(base, hunger=3, happy=4, gp=120, steps=3240):
     d = ImageDraw.Draw(base)
-    hw, gap = 26, 4
-    hunger_w = 30 + 6 + 4 * (hw + gap)
-    happy_w = 4 * (hw + gap)
-    total = hunger_w + 18 + happy_w
-    x = (W - total) / 2
-    y = 40
-    sprite(base, "ic_hunger", x + 15, y + 13, 28)          # meat-shank marks Hunger
-    x2 = hearts(base, x + 36, y, hunger, hw, gap)
-    hearts(base, x2 + 18, y, happy, hw, gap)
+    size, gap = 30, 5
+    row_w = 4 * (size + gap)
+    x = (W - row_w) / 2
+    y = 32
+    icon_meter(base, x, y, "ic_hunger", "ic_hunger_empty", hunger, size=size, gap=gap)
+    y2 = y + 40
+    icon_meter(base, x, y2, "ic_mood", "ic_mood_empty", happy, size=size, gap=gap)
     # GP + steps badge
-    by = y + 40
+    by = y2 + 44
     sprite(base, "ui_gp_coin", W / 2 - 60, by, 24)
     text(d, W / 2 - 30, by - 10, str(gp), 22, center=False)
     sprite(base, "ui_step_shoe", W / 2 + 20, by, 22)
@@ -178,9 +183,9 @@ def s_status():
     d = ImageDraw.Draw(img)
     text(d, W / 2, 108, "Status", 24)
     text(d, 118, 152, "Hunger", 20, center=False, shadow=False)
-    hearts(img, 250, 148, 3, 22, 3)
+    icon_meter(img, 236, 146, "ic_hunger", "ic_hunger_empty", 3, size=26, gap=4)
     text(d, 118, 190, "Happy", 20, center=False, shadow=False)
-    hearts(img, 250, 186, 4, 22, 3)
+    icon_meter(img, 236, 184, "ic_mood", "ic_mood_empty", 4, size=26, gap=4)
     bar(img, "Energy", 118, 236, 0.72, (70, 192, 230, 255))
     bar(img, "Bond", 118, 280, 0.55, (233, 111, 160, 255))
     bar(img, "Disc.", 118, 324, 0.40, (250, 220, 90, 255))

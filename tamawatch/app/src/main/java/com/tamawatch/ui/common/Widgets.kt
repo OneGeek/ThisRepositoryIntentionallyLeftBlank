@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Text
 
@@ -27,6 +28,18 @@ fun HeartRow(filled: Int, modifier: Modifier = Modifier) {
         repeat(4) { i ->
             PixelFrame(if (i < filled) "ui_heart_full" else "ui_heart_empty", 0, Modifier.size(14.dp))
         }
+    }
+}
+
+/**
+ * A Minecraft-style meter where each point IS its icon: `filled` colored icons
+ * followed by dimmed "empty" ones (e.g. meat-shanks for Hunger, smileys for
+ * Happy). No text label needed — the icon carries the meaning.
+ */
+@Composable
+fun IconMeter(fullId: String, emptyId: String, filled: Int, count: Int = 4, size: Dp = 14.dp) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        repeat(count) { i -> PixelFrame(if (i < filled) fullId else emptyId, 0, Modifier.size(size)) }
     }
 }
 

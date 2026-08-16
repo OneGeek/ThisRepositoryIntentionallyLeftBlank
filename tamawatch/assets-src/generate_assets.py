@@ -29,7 +29,8 @@ EXPECT_ART |= {"ov_poop", "ov_sick_skull", "ov_zzz", "ov_call",
                "ov_heart_particle", "ov_sweat", "ov_note"}
 EXPECT_ART |= {"ic_feed", "ic_light", "ic_play", "ic_bathroom", "ic_medicine",
                "ic_status", "ic_discipline", "ic_shop", "ic_steps",
-               "ic_settings", "ic_back", "ic_confirm", "ic_hunger"}
+               "ic_settings", "ic_back", "ic_confirm",
+               "ic_hunger", "ic_hunger_empty", "ic_mood", "ic_mood_empty"}
 EXPECT_ART |= {"ui_heart_full", "ui_heart_empty", "ui_gp_coin", "ui_step_shoe",
                "ui_selector", "ic_app_launcher_fg", "ic_app_launcher_bg",
                "ic_notification", "img_splash"}

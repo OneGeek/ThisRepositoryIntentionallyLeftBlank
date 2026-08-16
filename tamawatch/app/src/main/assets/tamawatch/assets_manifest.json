@@ -484,6 +484,17 @@
     ]
    }
   },
+  "ic_hunger_empty": {
+   "file": "ic_hunger_empty.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
   "ic_light": {
    "file": "ic_light.png",
    "frameH": 40,
@@ -497,6 +508,28 @@
   },
   "ic_medicine": {
    "file": "ic_medicine.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_mood": {
+   "file": "ic_mood.png",
+   "frameH": 40,
+   "frameW": 40,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "ic_mood_empty": {
+   "file": "ic_mood_empty.png",
    "frameH": 40,
    "frameW": 40,
    "frames": 1,

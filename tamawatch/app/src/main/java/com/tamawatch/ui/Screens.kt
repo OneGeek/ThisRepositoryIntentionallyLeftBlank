@@ -62,14 +62,11 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
 
         // Top status
         Column(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Hunger meter, prefixed with a meat-shank so it can't be mistaken for the Happy meter.
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    PixelFrame("ic_hunger", 0, Modifier.size(14.dp))
-                    HeartRow(pet.stats.hungerHearts)
-                }
-                HeartRow(pet.stats.happyHearts)
-            }
+            // Minecraft-style meters: each point in the meter IS its icon — a row
+            // of meat-shanks for Hunger, smileys for Happy (no labels needed).
+            IconMeter("ic_hunger", "ic_hunger_empty", pet.stats.hungerHearts)
+            Spacer(Modifier.height(2.dp))
+            IconMeter("ic_mood", "ic_mood_empty", pet.stats.happyHearts)
             Spacer(Modifier.height(2.dp))
             GpBadge(pet.gp, pet.stepsToday)
         }
@@ -175,8 +172,8 @@ fun StatusScreen(vm: TamaViewModel, pet: Pet) {
         item { Text(pet.name, style = MaterialTheme.typography.title3) }
         item { Text("${pet.species.display} · Gen ${pet.generation}", style = MaterialTheme.typography.caption1) }
         item { Text("${pet.stage} · ${pet.ageDays}d · ${pet.stats.weightG}g", style = MaterialTheme.typography.caption2) }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("Hunger"); HeartRow(pet.stats.hungerHearts) } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("Happy "); HeartRow(pet.stats.happyHearts) } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("Hunger"); IconMeter("ic_hunger", "ic_hunger_empty", pet.stats.hungerHearts) } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text("Happy "); IconMeter("ic_mood", "ic_mood_empty", pet.stats.happyHearts) } }
         item { StatBar("Energy", pet.stats.energy, tint = Color(0xFF46C0E6)) }
         item { StatBar("Bond  ", pet.stats.bond, tint = Color(0xFFE96FA0)) }
         item { StatBar("Disc. ", pet.stats.discipline, tint = Color(0xFFFADC5A)) }

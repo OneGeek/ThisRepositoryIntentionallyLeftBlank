@@ -426,12 +426,27 @@ def gen_icons(out):
                               d.line([12, 20, 20, 28], fill=ic, width=3)))
     add("ic_confirm", lambda d: (d.line([10, 20, 18, 28], fill=ic, width=4),
                                  d.line([18, 28, 32, 10], fill=ic, width=4)))
-    # Hunger indicator — a colored meat-shank (not tinted): reads on any background.
-    add("ic_hunger", lambda d: (d.line([21, 19, 32, 31], fill=P.CREAM, width=6),
-                                d.ellipse([29, 27, 38, 36], fill=P.CREAM, outline=P.INK, width=2),
-                                d.ellipse([28, 32, 37, 40], fill=P.CREAM, outline=P.INK, width=2),
-                                d.ellipse([4, 5, 26, 26], fill=(190, 95, 70, 255), outline=P.INK, width=2),
-                                d.ellipse([10, 10, 19, 18], fill=(214, 140, 110, 255))))
+    # Meter "points", Minecraft-style: each unit in a meter IS its icon, full or
+    # spent. Hunger = meat-shank, Happy = smiley; the *_empty variants are dimmed
+    # so a row reads as filled/unfilled points with no text labels.
+    def _shank(dd, meat, bone, shine=None):
+        dd.line([22, 21, 30, 30], fill=bone, width=5)
+        dd.ellipse([27, 24, 37, 34], fill=bone, outline=P.INK, width=2)
+        dd.ellipse([26, 30, 36, 40], fill=bone, outline=P.INK, width=2)
+        dd.ellipse([4, 3, 26, 30], fill=meat, outline=P.INK, width=2)
+        if shine:
+            dd.ellipse([9, 8, 16, 15], fill=shine)
+
+    def _smiley(dd, face, feat=P.INK):
+        dd.ellipse([5, 5, 35, 35], fill=face, outline=P.INK, width=2)
+        dot(dd, 16, 18, 2, feat)
+        dot(dd, 25, 18, 2, feat)
+        dd.arc([14, 16, 27, 30], 20, 160, fill=feat, width=3)
+
+    add("ic_hunger", lambda d: _shank(d, (178, 84, 60, 255), P.CREAM, (216, 140, 112, 255)))
+    add("ic_hunger_empty", lambda d: _shank(d, (72, 68, 78, 255), (116, 112, 118, 255)))
+    add("ic_mood", lambda d: _smiley(d, P.YELLOW))
+    add("ic_mood_empty", lambda d: _smiley(d, (98, 94, 100, 255), feat=(56, 54, 60, 255)))
 
 
 # ----------------------------------------------------------------------------- UI chrome
