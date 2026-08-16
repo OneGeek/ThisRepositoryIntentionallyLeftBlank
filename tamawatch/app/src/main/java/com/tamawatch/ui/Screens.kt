@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -74,8 +75,10 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
 
         if (pet.stage == Stage.EGG) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                PixelSprite("spr_egg", "wiggle", 2, Modifier.size(120.dp))
+                PixelSprite("spr_egg", "wiggle", 2, Modifier.size(108.dp))
                 Text("${pet.name}'s egg…", style = MaterialTheme.typography.caption1)
+                Spacer(Modifier.height(6.dp))
+                CompactChip(onClick = { vm.hatchNow() }, label = { Text("Hatch now") })
             }
             return@Box
         }

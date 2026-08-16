@@ -87,6 +87,8 @@ class TamaViewModel(
     }
     fun startNextGeneration(name: String) = viewModelScope.launch { repository.startNextGeneration(name); home() }
 
+    fun hatchNow() = viewModelScope.launch { repository.hatchNow() }
+
     fun setSound(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(soundOn = on) } }
     fun setReduceMotion(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(reduceMotion = on) } }
     fun setMic(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(micEnabled = on) } }

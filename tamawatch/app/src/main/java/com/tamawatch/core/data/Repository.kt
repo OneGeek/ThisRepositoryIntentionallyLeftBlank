@@ -159,6 +159,17 @@ class Repository(
         setItem("item_medicine", 1)
     }
 
+    /** Skip the incubation wait: backdate the egg so it hatches right now. */
+    suspend fun hatchNow() = mutex.withLock {
+        val cur = _pet.value ?: return@withLock
+        if (cur.stage != Stage.EGG) return@withLock
+        val now = clock()
+        val aged = cur.copy(stageStartMs = now - Tuning.EGG_MS - 1)
+        val sim = CareEngine.advance(aged, now, sleep, ::hourAt)
+        persist(sim.pet)
+        emitAll(sim.events)
+    }
+
     suspend fun startNextGeneration(name: String) = mutex.withLock {
         val prev = _pet.value ?: return@withLock
         val now = clock()

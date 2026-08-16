@@ -156,9 +156,14 @@ def screen_bg(bg_id):
 
 def s_egg():
     img = screen_bg("bg_egg")
-    sprite(img, "spr_egg", W / 2, W / 2 - 10, 150, tag="wiggle")
-    text(ImageDraw.Draw(img), W / 2, 350, "Tama's egg...", 26)
-    return img, "Egg — it hatches soon"
+    sprite(img, "spr_egg", W / 2, 214, 150, tag="wiggle")
+    d = ImageDraw.Draw(img)
+    text(d, W / 2, 314, "Tama's egg...", 24)
+    cw, ch, cy0 = 156, 42, 350
+    d.rounded_rectangle([(W - cw) / 2, cy0, (W + cw) / 2, cy0 + ch], radius=21,
+                        fill=(64, 116, 86, 255), outline=(255, 255, 255, 70), width=2)
+    text(d, W / 2, cy0 + 9, "Hatch now", 22)
+    return img, "Egg + Hatch-now button"
 
 
 def s_home_day():

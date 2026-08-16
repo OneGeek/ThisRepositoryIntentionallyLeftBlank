@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 data class Settings(
-    val soundOn: Boolean = true,
+    val soundOn: Boolean = false,
     val reduceMotion: Boolean = false,
     val micEnabled: Boolean = false,
     val sleep: SleepWindow = SleepWindow(),
@@ -31,7 +31,7 @@ class SettingsStore(private val context: Context) {
 
     val flow: Flow<Settings> = context.dataStore.data.map { p ->
         Settings(
-            soundOn = p[Keys.sound] ?: true,
+            soundOn = p[Keys.sound] ?: false,
             reduceMotion = p[Keys.reduce] ?: false,
             micEnabled = p[Keys.mic] ?: false,
             sleep = SleepWindow(p[Keys.sleepStart] ?: 22, p[Keys.sleepEnd] ?: 8),
@@ -42,7 +42,7 @@ class SettingsStore(private val context: Context) {
     suspend fun update(block: (Settings) -> Settings) {
         context.dataStore.edit { prefs ->
             val cur = Settings(
-                soundOn = prefs[Keys.sound] ?: true,
+                soundOn = prefs[Keys.sound] ?: false,
                 reduceMotion = prefs[Keys.reduce] ?: false,
                 micEnabled = prefs[Keys.mic] ?: false,
                 sleep = SleepWindow(prefs[Keys.sleepStart] ?: 22, prefs[Keys.sleepEnd] ?: 8),
