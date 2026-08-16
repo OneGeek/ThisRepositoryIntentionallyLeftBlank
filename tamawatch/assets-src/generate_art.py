@@ -6,6 +6,7 @@ Pixel art is authored at the listed cell sizes and shipped un-dpi-scaled
 (drawable-nodpi); the app scales it nearest-neighbor for the chunky look."""
 
 import os
+import math
 from PIL import Image, ImageDraw
 import palette as P
 
@@ -39,6 +40,48 @@ def dot(d, x, y, r, fill):
     d.ellipse([x - r, y - r, x + r, y + r], fill=fill)
 
 
+# 4x4 ordered-dither matrix — used for palette-pure (1-bit) soft shadows so a
+# grounding shadow reads correctly over any background without adding colors.
+_BAYER4 = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+
+
+def dither_ellipse(img, cx, cy, rx, ry, color, coverage=0.4):
+    """Stamp an ordered-dithered filled ellipse straight into the pixel buffer,
+    only where the pixel is still transparent (so it stays behind the body)."""
+    if rx <= 0 or ry <= 0:
+        return
+    px = img.load()
+    w, h = img.size
+    thr = coverage * 16.0
+    for y in range(max(0, cy - ry), min(h, cy + ry + 1)):
+        ny = (y - cy) / ry
+        for x in range(max(0, cx - rx), min(w, cx + rx + 1)):
+            nx = (x - cx) / rx
+            if nx * nx + ny * ny <= 1.0 and _BAYER4[y & 3][x & 3] < thr and px[x, y][3] == 0:
+                px[x, y] = color
+
+
+def _draw_eyes(d, cx, ey, ex, size, state):
+    """state: open | wide | closed | happy | x"""
+    if state == "closed":
+        d.line([cx - ex - 3, ey, cx - ex + 3, ey], fill=P.INK, width=2)
+        d.line([cx + ex - 3, ey, cx + ex + 3, ey], fill=P.INK, width=2)
+    elif state == "happy":
+        d.arc([cx - ex - 4, ey - 4, cx - ex + 4, ey + 4], 200, 340, fill=P.INK, width=2)
+        d.arc([cx + ex - 4, ey - 4, cx + ex + 4, ey + 4], 200, 340, fill=P.INK, width=2)
+    elif state == "x":
+        for sgn in (-1, 1):
+            bx = cx + sgn * ex
+            d.line([bx - 3, ey - 3, bx + 3, ey + 3], fill=P.INK, width=2)
+            d.line([bx - 3, ey + 3, bx + 3, ey - 3], fill=P.INK, width=2)
+    else:  # open / wide
+        r = (3 if size >= 56 else 2) + (1 if state == "wide" else 0)
+        dot(d, cx - ex, ey, r, P.INK)
+        dot(d, cx + ex, ey, r, P.INK)
+        dot(d, cx - ex + 1, ey - 1, 1, P.WHITE)
+        dot(d, cx + ex + 1, ey - 1, 1, P.WHITE)
+
+
 # ----------------------------------------------------------------------------- creature
 # Each species = dict of body color/accent/feature/shape. Poses are variations.
 SPECIES = {
@@ -66,7 +109,8 @@ SPECIES = {
 }
 
 
-def draw_feature(d, cx, top, rx, feat, accent):
+def draw_feature(d, cx, top, rx, feat, accent, dy=0):
+    top = int(top + dy)   # dy = secondary-motion lag, so features jiggle after the body
     if feat == "antenna":
         d.line([cx, top, cx, top - rx * 0.5], fill=P.INK, width=2)
         dot(d, cx, int(top - rx * 0.5), 3, accent)
@@ -94,125 +138,150 @@ def draw_feature(d, cx, top, rx, feat, accent):
         d.ellipse([cx - rx * 0.5, top - 8, cx + rx * 0.5, top - 3], outline=P.YELLOW, width=2)
 
 
-def draw_creature(size, sp, pose):
-    """size = cell px; sp = species dict; pose = str."""
+def _motion(anim, t, sp):
+    """Map (anim, phase t in [0,1)) -> a motion state dict. This is where the
+    life comes from: squash/stretch, bob, lean, blink, secondary-motion lag."""
+    ph = t * 2 * math.pi
+    m = dict(bob=0.0, lean=0.0, sqx=1.0, sqy=1.0, feat_dy=0.0,
+             lift_l=0, lift_r=0, arms="side", eyes="open", mouth="smile",
+             recolor=None)
+    if anim == "idle":
+        b = math.sin(ph)
+        m.update(sqy=1 + 0.05 * b, sqx=1 - 0.035 * b, bob=-1 - 0.6 * (b + 1),
+                 feat_dy=-0.8 * b, eyes=("closed" if 0.70 <= t < 0.86 else "open"))
+    elif anim == "walk":
+        s = math.sin(ph)
+        m.update(bob=-abs(s) * 2, lean=1.2 * s, feat_dy=-0.6 * s,
+                 lift_l=(3 if s > 0 else 0), lift_r=(3 if s < 0 else 0))
+    elif anim == "happy":
+        jump = math.sin(math.pi * t) ** 1.3            # 0 -> 1 -> 0 arc
+        crouch = max(0.0, -math.sin(2 * math.pi * t))  # squash at take-off/landing
+        m.update(bob=-11 * jump, sqy=1 + 0.10 * jump - 0.12 * crouch,
+                 sqx=1 - 0.06 * jump + 0.10 * crouch, feat_dy=-3.0 * jump,
+                 arms="up", eyes="happy", mouth="open")
+    elif anim == "sad":
+        b = math.sin(ph)
+        m.update(sqy=1 + 0.02 * b, bob=1, mouth="frown")
+    elif anim == "sick":
+        m.update(lean=1.6 * math.sin(ph), recolor=P.lighter(P.GRAY_L, 0.2),
+                 eyes="x", mouth="frown")
+    elif anim == "sleep":
+        b = math.sin(ph)
+        m.update(sqy=1 + 0.04 * b, sqx=1 - 0.03 * b, bob=1 - 0.5 * (b + 1),
+                 eyes="closed", mouth="smile")
+    elif anim == "eat":
+        chew = math.sin(ph)
+        m.update(bob=-1, mouth=("open" if chew > 0 else "smile"))
+    elif anim == "call":
+        shake = math.sin(ph * 2)
+        m.update(lean=2.6 * shake, feat_dy=-1.5 * shake, eyes="wide",
+                 mouth=("open" if math.sin(ph) > 0 else "smile"))
+    return m
+
+
+def draw_creature(size, sp, anim="idle", t=0.0):
+    """Render one animation frame. anim in idle|walk|happy|sad|sick|sleep|eat|call;
+    t is the phase within that anim's loop, so frames tween smoothly."""
     img, d = cell(size, size)
     cx = size // 2
     baseline = int(size * 0.82)
     sx, sy = sp["shape"]
-    rx, ry = int(size * sx * 0.5), int(size * sy * 0.5)
-    bob = 0
-    if pose in ("idle1", "happy0", "call"):
-        bob = -1
-    if pose == "happy1":
-        bob = -3
-    cy = baseline - ry + bob
+    rx0, ry0 = int(size * sx * 0.5), int(size * sy * 0.5)
+    m = _motion(anim, t, sp)
 
-    body = sp["body"]
+    rx = max(4, int(rx0 * m["sqx"]))
+    ry = max(4, int(ry0 * m["sqy"]))
+    cy = int(baseline - ry + m["bob"])
+    ucx = int(cx + m["lean"])              # upper body leans; feet stay planted
+    body = m["recolor"] or sp["body"]
     outline = P.INK
-    # feet
+
+    # grounding shadow — shrinks as the body lifts off (jumps), grounding motion
+    lift = max(0.0, -m["bob"])
+    dither_ellipse(img, cx, baseline + 3, max(4, int(rx * (0.92 - 0.03 * lift))),
+                   max(2, rx // 5), P.INK, 0.4)
+
+    # feet (planted; alternate lift on walk)
     foot_dx = int(rx * 0.55)
-    fy = baseline
-    lift = 2 if pose == "walk1" else 0
-    ellipse(d, cx - foot_dx, fy - lift, 5, 4, P.darker(body, 0.8))
-    ellipse(d, cx + foot_dx, fy - (2 - lift), 5, 4, P.darker(body, 0.8))
+    ellipse(d, cx - foot_dx, baseline - m["lift_l"], 5, 4, P.darker(body, 0.8))
+    ellipse(d, cx + foot_dx, baseline - m["lift_r"], 5, 4, P.darker(body, 0.8))
 
-    # feature behind/top
-    draw_feature(d, cx, cy - ry, rx, sp["feat"], sp.get("accent", P.INK))
+    # feature (top, lags the body for secondary motion)
+    draw_feature(d, ucx, cy - ry, rx, sp["feat"], sp.get("accent", P.INK), m["feat_dy"])
 
-    # body
-    col = body
-    if pose == "sick":
-        col = P.lighter(P.GRAY_L, 0.2)
-    ellipse(d, cx, cy, rx, ry, col, outline, ow=2)
-    # belly
-    ellipse(d, cx, cy + int(ry * 0.25), int(rx * 0.6), int(ry * 0.5), P.lighter(col, 0.45), outline=None)
+    # body + belly
+    ellipse(d, ucx, cy, rx, ry, body, outline, ow=2)
+    ellipse(d, ucx, cy + int(ry * 0.25), int(rx * 0.6), int(ry * 0.5), P.lighter(body, 0.45), outline=None)
 
     # arms
     arm_y = cy + int(ry * 0.15)
-    if pose in ("happy0", "happy1"):
-        d.line([cx - rx, arm_y, cx - rx - 4, arm_y - 6], fill=outline, width=3)
-        d.line([cx + rx, arm_y, cx + rx + 4, arm_y - 6], fill=outline, width=3)
+    if m["arms"] == "up":
+        d.line([ucx - rx, arm_y, ucx - rx - 4, arm_y - 6], fill=outline, width=3)
+        d.line([ucx + rx, arm_y, ucx + rx + 4, arm_y - 6], fill=outline, width=3)
     else:
-        dot(d, cx - rx, arm_y, 3, P.darker(col, 0.85))
-        dot(d, cx + rx, arm_y, 3, P.darker(col, 0.85))
+        dot(d, ucx - rx, arm_y, 3, P.darker(body, 0.85))
+        dot(d, ucx + rx, arm_y, 3, P.darker(body, 0.85))
 
     # eyes
     ey = cy - int(ry * 0.15)
     ex = int(rx * 0.42)
-    if pose in ("sleep0", "sleep1", "idle1") and pose != "idle1":
-        pass
-    if pose in ("sleep0", "sleep1"):
-        d.line([cx - ex - 3, ey, cx - ex + 3, ey], fill=P.INK, width=2)
-        d.line([cx + ex - 3, ey, cx + ex + 3, ey], fill=P.INK, width=2)
-    elif pose == "happy1" or pose == "happy0":
-        d.arc([cx - ex - 4, ey - 4, cx - ex + 4, ey + 4], 200, 340, fill=P.INK, width=2)
-        d.arc([cx + ex - 4, ey - 4, cx + ex + 4, ey + 4], 200, 340, fill=P.INK, width=2)
-    elif pose == "sick":
-        d.line([cx - ex - 3, ey - 3, cx - ex + 3, ey + 3], fill=P.INK, width=2)
-        d.line([cx - ex - 3, ey + 3, cx - ex + 3, ey - 3], fill=P.INK, width=2)
-        d.line([cx + ex - 3, ey - 3, cx + ex + 3, ey + 3], fill=P.INK, width=2)
-        d.line([cx + ex - 3, ey + 3, cx + ex + 3, ey - 3], fill=P.INK, width=2)
-    else:
-        r = 3 if size >= 56 else 2
-        dot(d, cx - ex, ey, r, P.INK)
-        dot(d, cx + ex, ey, r, P.INK)
-        dot(d, cx - ex + 1, ey - 1, 1, P.WHITE)
-        dot(d, cx + ex + 1, ey - 1, 1, P.WHITE)
+    _draw_eyes(d, ucx, ey, ex, size, m["eyes"])
 
     # cheeks
-    if sp.get("cheeks") and pose not in ("sick", "sad"):
-        dot(d, cx - int(rx * 0.7), ey + 4, 2, P.PINK_L)
-        dot(d, cx + int(rx * 0.7), ey + 4, 2, P.PINK_L)
+    if sp.get("cheeks") and m["eyes"] != "x" and anim not in ("sad", "sick"):
+        dot(d, ucx - int(rx * 0.7), ey + 4, 2, P.PINK_L)
+        dot(d, ucx + int(rx * 0.7), ey + 4, 2, P.PINK_L)
 
     # mouth
     my = cy + int(ry * 0.15)
-    if pose in ("happy0", "happy1", "eat1"):
-        d.chord([cx - 5, my - 3, cx + 5, my + 6], 0, 180, fill=P.RED, outline=P.INK)
-    elif pose == "eat0":
-        ellipse(d, cx, my + 1, 3, 4, P.RED, P.INK)
-    elif pose in ("sad", "sick"):
-        d.arc([cx - 5, my + 1, cx + 5, my + 7], 20, 160, fill=P.INK, width=2)
-    elif sp.get("grumpy"):
-        d.line([cx - 4, my + 2, cx + 4, my + 2], fill=P.INK, width=2)
+    if m["mouth"] == "open" and anim == "eat":
+        ellipse(d, ucx, my + 1, 3, 4, P.RED, P.INK)
+    elif m["mouth"] == "open":
+        d.chord([ucx - 5, my - 3, ucx + 5, my + 6], 0, 180, fill=P.RED, outline=P.INK)
+    elif m["mouth"] == "frown":
+        d.arc([ucx - 5, my + 1, ucx + 5, my + 7], 20, 160, fill=P.INK, width=2)
+    elif sp.get("grumpy") and anim not in ("happy", "eat"):
+        d.line([ucx - 4, my + 2, ucx + 4, my + 2], fill=P.INK, width=2)
     else:
-        d.arc([cx - 4, my - 2, cx + 4, my + 4], 20, 160, fill=P.INK, width=2)
+        d.arc([ucx - 4, my - 2, ucx + 4, my + 4], 20, 160, fill=P.INK, width=2)
 
     return img
 
 
-# per-species active sheet: idle,idle,walk,walk,happy,happy
-SPECIES_POSES = ["idle0", "idle1", "walk0", "walk1", "happy0", "happy1"]
-SPECIES_TAGS = {"idle": [0, 1], "walk": [2, 3], "happy": [4, 5]}
-# baby gets the full set
-BABY_POSES = ["idle0", "idle1", "walk0", "walk1", "happy0", "happy1",
-              "sad", "sick", "sleep0", "sleep1", "eat0", "eat1", "call"]
-BABY_TAGS = {"idle": [0, 1], "walk": [2, 3], "happy": [4, 5], "sad": [6],
-             "sick": [7], "sleep": [8, 9], "eat": [10, 11], "call": [12]}
-# shared stageset per stage silhouette: sad,sick,sleep,sleep,eat,eat,call
-STAGESET_POSES = ["sad", "sick", "sleep0", "sleep1", "eat0", "eat1", "call"]
-STAGESET_TAGS = {"sad": [0], "sick": [1], "sleep": [2, 3], "eat": [4, 5], "call": [6]}
+# Frames per animation loop. More frames -> smoother motion; the renderer
+# cycles any tag's frame list, so counts are free (validation checks IDs only).
+ANIM_FRAMES = {"idle": 6, "walk": 6, "happy": 6, "sad": 2, "sick": 2,
+               "sleep": 4, "eat": 4, "call": 4}
+ACTIVE_ANIMS = ["idle", "walk", "happy"]                                  # child/teen/adult sheets
+STAGESET_ANIMS = ["sad", "sick", "sleep", "eat", "call"]                  # shared per-stage states
+BABY_ANIMS = ["idle", "walk", "happy", "sad", "sick", "sleep", "eat", "call"]
 
 SIZES = {"baby": 48, "child": 56, "teen": 64, "adult": 64}
 
 
+def _build_sheet(size, sp, anims, id_, out):
+    """Concatenate several animation loops into one strip, recording each anim's
+    frame indices as a manifest tag."""
+    frames, tags = [], {}
+    for a in anims:
+        n = ANIM_FRAMES[a]
+        start = len(frames)
+        frames += [draw_creature(size, sp, a, i / n) for i in range(n)]
+        tags[a] = list(range(start, start + n))
+    strip(frames, tags, id_, out)
+
+
 def gen_characters(out):
-    # baby (full set)
-    frames = [draw_creature(SIZES["baby"], SPECIES["baby"], p) for p in BABY_POSES]
-    strip(frames, BABY_TAGS, "spr_baby", out)
-    # children/teens/adults active sheets
+    _build_sheet(SIZES["baby"], SPECIES["baby"], BABY_ANIMS, "spr_baby", out)
     for key, sp in SPECIES.items():
         if key == "baby":
             continue
         stage = key.split("_")[0]
-        size = SIZES[stage]
-        frames = [draw_creature(size, sp, p) for p in SPECIES_POSES]
-        strip(frames, SPECIES_TAGS, "spr_" + key, out)
-    # stagesets (use a neutral silhouette per stage: child_a/teen_a/adult_a body but gray)
+        _build_sheet(SIZES[stage], sp, ACTIVE_ANIMS, "spr_" + key, out)
+    # stagesets (neutral gray silhouette per stage)
     for stage in ("child", "teen", "adult"):
         neutral = dict(SPECIES[stage + "_a"]); neutral["body"] = P.GRAY_L; neutral["accent"] = P.GRAY_D
-        frames = [draw_creature(SIZES[stage], neutral, p) for p in STAGESET_POSES]
-        strip(frames, STAGESET_TAGS, "spr_stageset_" + stage, out)
+        _build_sheet(SIZES[stage], neutral, STAGESET_ANIMS, "spr_stageset_" + stage, out)
 
 
 def gen_egg(out):
@@ -395,7 +464,7 @@ def gen_ui(out):
 
     # launcher fg 108x108 (creature) + bg 108x108
     img, d = cell(108, 108)
-    baby = draw_creature(72, SPECIES["baby"], "happy0").resize((84, 84), Image.NEAREST)
+    baby = draw_creature(72, SPECIES["baby"], "happy", 0.5).resize((84, 84), Image.NEAREST)
     img.paste(baby, (12, 14), baby)
     strip([img], {"idle": [0]}, "ic_app_launcher_fg", out)
     img, d = cell(108, 108)
@@ -413,7 +482,7 @@ def gen_ui(out):
     img, d = cell(480, 480)
     for y in range(480):
         d.line([0, y, 480, y], fill=P.lighter(P.LCD_L, y / 700))
-    big = draw_creature(160, SPECIES["baby"], "happy0").resize((240, 240), Image.NEAREST)
+    big = draw_creature(160, SPECIES["baby"], "happy", 0.5).resize((240, 240), Image.NEAREST)
     img.paste(big, (120, 120), big)
     d.text((196, 380), "TamaWatch", fill=P.INK)
     strip([img], {"idle": [0]}, "img_splash", out)
@@ -522,7 +591,7 @@ def gen_cutscene(out):
             for n in range(k + 1):
                 d.line([24 + n * 6, 24, 30 + n * 6, 34], fill=P.INK, width=2)
         else:
-            b = draw_creature(48, SPECIES["baby"], "happy0")
+            b = draw_creature(48, SPECIES["baby"], "happy", 0.5)
             img.paste(b, (8, 8), b)
             if k == 3:
                 for a in range(0, 360, 45):
@@ -552,7 +621,7 @@ def gen_cutscene(out):
     for k in range(3):
         img, d = cell(64, 64)
         alpha = [200, 120, 60][k]
-        b = draw_creature(48, SPECIES["adult_a"], "sleep0")
+        b = draw_creature(48, SPECIES["adult_a"], "sleep", 0.25)
         b.putalpha(b.getchannel("A").point(lambda a: min(a, alpha)))
         img.paste(b, (8, 8 - k * 3), b)
         dot(d, 32, 10 - k * 2, 2 + k, P.YELLOW)
