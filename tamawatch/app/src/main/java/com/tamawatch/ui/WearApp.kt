@@ -34,6 +34,7 @@ fun WearApp(vm: TamaViewModel) {
                 Screen.Shop -> ShopScreen(vm, current)
                 Screen.Steps -> StepsScreen(vm, current)
                 Screen.Settings -> SettingsScreen(vm, settings)
+                Screen.Help -> HelpScreen(vm)
             }
         }
     }

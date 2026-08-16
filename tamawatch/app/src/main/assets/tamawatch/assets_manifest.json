@@ -801,7 +801,7 @@
   },
   "spr_adult_a": {
    "file": "spr_adult_a.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -854,7 +854,7 @@
   },
   "spr_adult_b": {
    "file": "spr_adult_b.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -907,7 +907,7 @@
   },
   "spr_adult_c": {
    "file": "spr_adult_c.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -960,7 +960,7 @@
   },
   "spr_adult_d": {
    "file": "spr_adult_d.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1013,7 +1013,7 @@
   },
   "spr_adult_e": {
    "file": "spr_adult_e.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1066,7 +1066,7 @@
   },
   "spr_adult_f": {
    "file": "spr_adult_f.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1119,7 +1119,7 @@
   },
   "spr_adult_g": {
    "file": "spr_adult_g.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1172,7 +1172,7 @@
   },
   "spr_adult_h": {
    "file": "spr_adult_h.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1225,7 +1225,7 @@
   },
   "spr_baby": {
    "file": "spr_baby.png",
-   "frameH": 192,
+   "frameH": 288,
    "frameW": 192,
    "frames": 49,
    "tags": {
@@ -1304,7 +1304,7 @@
   },
   "spr_child_a": {
    "file": "spr_child_a.png",
-   "frameH": 224,
+   "frameH": 336,
    "frameW": 224,
    "frames": 33,
    "tags": {
@@ -1357,7 +1357,7 @@
   },
   "spr_child_b": {
    "file": "spr_child_b.png",
-   "frameH": 224,
+   "frameH": 336,
    "frameW": 224,
    "frames": 33,
    "tags": {
@@ -1410,7 +1410,7 @@
   },
   "spr_child_c": {
    "file": "spr_child_c.png",
-   "frameH": 224,
+   "frameH": 336,
    "frameW": 224,
    "frames": 33,
    "tags": {
@@ -1484,7 +1484,7 @@
   },
   "spr_stageset_adult": {
    "file": "spr_stageset_adult.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 16,
    "tags": {
@@ -1518,7 +1518,7 @@
   },
   "spr_stageset_child": {
    "file": "spr_stageset_child.png",
-   "frameH": 224,
+   "frameH": 336,
    "frameW": 224,
    "frames": 16,
    "tags": {
@@ -1552,7 +1552,7 @@
   },
   "spr_stageset_teen": {
    "file": "spr_stageset_teen.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 16,
    "tags": {
@@ -1586,7 +1586,7 @@
   },
   "spr_teen_a": {
    "file": "spr_teen_a.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1639,7 +1639,7 @@
   },
   "spr_teen_b": {
    "file": "spr_teen_b.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1692,7 +1692,7 @@
   },
   "spr_teen_c": {
    "file": "spr_teen_c.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1745,7 +1745,7 @@
   },
   "spr_teen_d": {
    "file": "spr_teen_d.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {
@@ -1798,7 +1798,7 @@
   },
   "spr_teen_e": {
    "file": "spr_teen_e.png",
-   "frameH": 256,
+   "frameH": 384,
    "frameW": 256,
    "frames": 33,
    "tags": {

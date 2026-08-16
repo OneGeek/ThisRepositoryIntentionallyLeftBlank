@@ -50,9 +50,6 @@ fun poseFor(pet: Pet): Pair<String, String> {
 
 private data class RingAction(val icon: String, val label: String, val onGo: () -> Unit, val alert: Boolean = false)
 
-/** Four idle loops; the home pet plays a random one each cycle so it never feels canned. */
-private val IdleVariants = listOf("idle", "idle2", "idle3", "idle4")
-
 @Composable
 fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean) {
     val bg = when {
@@ -65,18 +62,8 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         PixelFrame(bg, 0, Modifier.fillMaxSize())
 
-        // Top status
-        Column(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            // Minecraft-style meters: each point in the meter IS its icon — a row
-            // of meat-shanks for Hunger, smileys for Happy (no labels needed).
-            IconMeter("ic_hunger", "ic_hunger_empty", pet.stats.hungerHearts)
-            Spacer(Modifier.height(2.dp))
-            IconMeter("ic_mood", "ic_mood_empty", pet.stats.happyHearts)
-            Spacer(Modifier.height(2.dp))
-            GpBadge(pet.gp, pet.stepsToday)
-        }
-
         if (pet.stage == Stage.EGG) {
+            TopStatus(pet)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 PixelSprite("spr_egg", "wiggle", 2, Modifier.size(108.dp))
                 Text("${pet.name}'s egg…", style = MaterialTheme.typography.caption1)
@@ -86,8 +73,25 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
             return@Box
         }
 
-        // Care ring + centered pet
+        // Care ring + centered pet, then the status ON TOP so a jumping pet slips
+        // behind the meters instead of being clipped.
         CareRing(vm, pet)
+        TopStatus(pet)
+    }
+}
+
+/** The top status meters (Hunger shanks / Happy smileys / GP), drawn Minecraft-style. */
+@Composable
+private fun BoxScope.TopStatus(pet: Pet) {
+    Column(
+        Modifier.align(Alignment.TopCenter).padding(top = 18.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        IconMeter("ic_hunger", "ic_hunger_empty", pet.stats.hungerHearts)
+        Spacer(Modifier.height(2.dp))
+        IconMeter("ic_mood", "ic_mood_empty", pet.stats.happyHearts)
+        Spacer(Modifier.height(2.dp))
+        GpBadge(pet.gp, pet.stepsToday)
     }
 }
 
@@ -141,8 +145,9 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
             }
         }
 
-        // Center: pet + highlighted label. Tap = activate highlighted; long-press = pet.
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Center: pet + highlighted label. Nudged down a touch so the pet's resting
+        // head clears the status; a jump then rises up behind those meters.
+        Column(Modifier.offset(y = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             val (id, tag) = poseFor(pet)
             Box(
                 Modifier
@@ -153,10 +158,10 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
                             onLongPress = { vm.petIt() },
                         )
                     },
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.BottomCenter,
             ) {
-                if (tag == "idle") PixelIdle(id, IdleVariants, 3, Modifier.fillMaxSize())
-                else PixelSprite(id, tag, 3, Modifier.fillMaxSize())
+                // Feet pinned to the bottom; the frame's headroom overflows upward.
+                PetSprite(id, tag, 3, Modifier.align(Alignment.BottomCenter))
                 if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
                 if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
                 if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
@@ -260,6 +265,47 @@ fun SettingsScreen(vm: TamaViewModel, s: com.tamawatch.core.data.Settings) {
         item { Button(onClick = { vm.setReduceMotion(!s.reduceMotion) }, modifier = Modifier.fillMaxWidth()) { Text("Reduce motion: ${if (s.reduceMotion) "On" else "Off"}") } }
         item { Button(onClick = { vm.setMic(!s.micEnabled) }, modifier = Modifier.fillMaxWidth()) { Text("Mic talk: ${if (s.micEnabled) "On" else "Off"}") } }
         item { Text("Sleep ${s.sleep.startHour}:00–${s.sleep.endHour}:00", style = MaterialTheme.typography.caption2) }
+        item { Button(onClick = { vm.go(Screen.Help) }, modifier = Modifier.fillMaxWidth()) { Text("Help: what the icons mean") } }
+        item { BackButton(vm) }
+    }
+}
+
+/** Help: a legend explaining every icon the player sees. */
+private val HelpEntries = listOf(
+    Triple("ic_hunger", "Hunger", "Meat shanks show how fed your pet is — refill it by feeding."),
+    Triple("ic_mood", "Happy", "Smileys show your pet's mood — raise it by playing and petting."),
+    Triple("ic_feed", "Feed", "Open the food menu to feed a meal or snack."),
+    Triple("ic_play", "Play", "Play a mini-game to raise happiness and earn Gotchi Points."),
+    Triple("ic_bathroom", "Clean", "Flush away poop so your pet doesn't get sick."),
+    Triple("ic_medicine", "Medicine", "Cure your pet when it's sick (needs a medicine in your bag)."),
+    Triple("ic_light", "Lights", "Turn the room light off so a sleepy pet can rest."),
+    Triple("ic_status", "Status", "See detailed hunger, happy, energy, bond and discipline."),
+    Triple("ic_shop", "Shop", "Spend Gotchi Points on food, medicine and backgrounds."),
+    Triple("ic_steps", "Steps", "Your real steps become Gotchi Points each day."),
+    Triple("ic_discipline", "Scold", "Discipline your pet when it calls for no real reason."),
+    Triple("ic_settings", "Settings", "Sound, reduce-motion, and this help."),
+)
+
+@Composable
+fun HelpScreen(vm: TamaViewModel) {
+    ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        item { Text("Help", style = MaterialTheme.typography.title3) }
+        item { Text("What the icons mean", style = MaterialTheme.typography.caption2) }
+        HelpEntries.forEach { (icon, name, desc) ->
+            item {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PixelFrame(icon, 0, Modifier.size(30.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(name, style = MaterialTheme.typography.button)
+                        Text(desc, style = MaterialTheme.typography.caption3)
+                    }
+                }
+            }
+        }
         item { BackButton(vm) }
     }
 }

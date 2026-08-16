@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class Screen { Home, Feed, PlayMenu, Jump, Guess, Catch, Status, Shop, Steps, Settings }
+enum class Screen { Home, Feed, PlayMenu, Jump, Guess, Catch, Status, Shop, Steps, Settings, Help }
 
 sealed interface Cutscene {
     data object Hatch : Cutscene

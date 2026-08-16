@@ -257,12 +257,13 @@ def _motion(anim, t, sp):
     return m
 
 
-def draw_creature(size, sp, anim="idle", t=0.0):
+def draw_creature(size, sp, anim="idle", t=0.0, pad=0):
     """Render one animation frame. anim in idle|walk|happy|sad|sick|sleep|eat|call;
-    t is the phase within that anim's loop, so frames tween smoothly."""
-    img, d = cell(size, size)
+    t is the phase within that anim's loop, so frames tween smoothly. `pad` adds
+    transparent headroom above the creature so jumps and antennae never clip."""
+    img, d = cell(size, size + pad)
     cx = size // 2
-    baseline = int(size * 0.82)
+    baseline = int(pad + size * 0.82)
     sx, sy = sp["shape"]
     rx0, ry0 = int(size * sx * 0.5), int(size * sy * 0.5)
     m = _motion(anim, t, sp)
@@ -344,12 +345,14 @@ SIZES = {"baby": 48, "child": 56, "teen": 64, "adult": 64}
 
 def _build_sheet(size, sp, anims, id_, out):
     """Concatenate several animation loops into one strip, recording each anim's
-    frame indices as a manifest tag."""
+    frame indices as a manifest tag. Frames carry top headroom (2:3 cell) so the
+    creature can jump and wave its antenna without being clipped."""
+    pad = size // 2
     frames, tags = [], {}
     for a in anims:
         n = ANIM_FRAMES[a]
         start = len(frames)
-        frames += [draw_creature(size, sp, a, i / n) for i in range(n)]
+        frames += [draw_creature(size, sp, a, i / n, pad) for i in range(n)]
         tags[a] = list(range(start, start + n))
     strip(frames, tags, id_, out)
 

@@ -55,6 +55,14 @@ def sprite(base, sid, cx, cy, size, tag=None, index=0):
     stamp(base, frame(sid, index, tag), cx, cy, size)
 
 
+def pet_bottom(base, sid, cx, bottom_y, width, tag=None, index=0):
+    """Place a creature by width with its feet at bottom_y — the frame's top
+    headroom overflows upward (matching the app's bottom-anchored pet)."""
+    im = frame(sid, index, tag)
+    im = im.resize((width, max(1, round(im.height * width / im.width))), Image.LANCZOS)
+    base.paste(im, (round(cx - width / 2), round(bottom_y - im.height)), im)
+
+
 def _font(sz, bold=True):
     names = (["DejaVuSans-Bold.ttf", "DejaVuSans.ttf"] if bold else ["DejaVuSans.ttf"])
     roots = ["/usr/share/fonts/truetype/dejavu", "/usr/share/fonts/dejavu",
@@ -171,16 +179,16 @@ def s_egg():
 def s_home_day():
     img = screen_bg("bg_room_day")
     label = care_ring(img, sel=0)
-    sprite(img, "spr_baby", W / 2, 244, 128, tag="idle")
-    text(ImageDraw.Draw(img), W / 2, 300, label, 22)
-    meters(img, hunger=3, happy=4)
+    pet_bottom(img, "spr_baby", W / 2, 300, 108, tag="idle")
+    text(ImageDraw.Draw(img), W / 2, 306, label, 22)
+    meters(img, hunger=3, happy=4)          # drawn last -> in front of the pet
     return img, "Home - care ring"
 
 
 def s_sleeping():
     img = screen_bg("bg_room_night")
-    sprite(img, "spr_baby", W / 2, 250, 132, tag="sleep")
-    sprite(img, "ov_zzz", W / 2 + 74, 178, 40)
+    pet_bottom(img, "spr_baby", W / 2, 306, 112, tag="sleep")
+    sprite(img, "ov_zzz", W / 2 + 70, 208, 40)
     meters(img, hunger=2, happy=3)
     return img, "Sleeping at night"
 
