@@ -63,7 +63,11 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
         // Top status
         Column(Modifier.align(Alignment.TopCenter).padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                HeartRow(pet.stats.hungerHearts)
+                // Hunger meter, prefixed with a meat-shank so it can't be mistaken for the Happy meter.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    PixelFrame("ic_hunger", 0, Modifier.size(14.dp))
+                    HeartRow(pet.stats.hungerHearts)
+                }
                 HeartRow(pet.stats.happyHearts)
             }
             Spacer(Modifier.height(2.dp))

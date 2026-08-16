@@ -7,6 +7,7 @@ Pixel art is authored at the listed cell sizes and shipped un-dpi-scaled
 
 import os
 import math
+import numpy as np
 from PIL import Image, ImageDraw
 import palette as P
 
@@ -425,6 +426,12 @@ def gen_icons(out):
                               d.line([12, 20, 20, 28], fill=ic, width=3)))
     add("ic_confirm", lambda d: (d.line([10, 20, 18, 28], fill=ic, width=4),
                                  d.line([18, 28, 32, 10], fill=ic, width=4)))
+    # Hunger indicator — a colored meat-shank (not tinted): reads on any background.
+    add("ic_hunger", lambda d: (d.line([21, 19, 32, 31], fill=P.CREAM, width=6),
+                                d.ellipse([29, 27, 38, 36], fill=P.CREAM, outline=P.INK, width=2),
+                                d.ellipse([28, 32, 37, 40], fill=P.CREAM, outline=P.INK, width=2),
+                                d.ellipse([4, 5, 26, 26], fill=(190, 95, 70, 255), outline=P.INK, width=2),
+                                d.ellipse([10, 10, 19, 18], fill=(214, 140, 110, 255))))
 
 
 # ----------------------------------------------------------------------------- UI chrome
@@ -489,44 +496,169 @@ def gen_ui(out):
 
 
 # ----------------------------------------------------------------------------- backgrounds
-def _round_bg(topcol, botcol, floorcol=None):
-    img, d = cell(480, 480)
-    for y in range(480):
-        t = y / 480
-        c = (int(topcol[0] + (botcol[0] - topcol[0]) * t),
-             int(topcol[1] + (botcol[1] - topcol[1]) * t),
-             int(topcol[2] + (botcol[2] - topcol[2]) * t), 255)
-        d.line([0, y, 480, y], fill=c)
-    if floorcol:
-        d.rectangle([0, 360, 480, 480], fill=floorcol)
-        d.line([0, 360, 480, 360], fill=P.darker(floorcol, 0.7), width=3)
-    return img, d
+BG = 480
+WOOD = (196, 150, 96, 255)
+
+# 8x8 ordered-dither thresholds, centered on 0 (~ -0.5..0.5).
+_BAYER8 = np.array([
+    [0, 32, 8, 40, 2, 34, 10, 42], [48, 16, 56, 24, 50, 18, 58, 26],
+    [12, 44, 4, 36, 14, 46, 6, 38], [60, 28, 52, 20, 62, 30, 54, 22],
+    [3, 35, 11, 43, 1, 33, 9, 41], [51, 19, 59, 27, 49, 17, 57, 25],
+    [15, 47, 7, 39, 13, 45, 5, 37], [63, 31, 55, 23, 61, 29, 53, 21],
+], dtype=np.float32) / 64.0 - 0.5
+
+
+def _rgb(c):
+    return np.array(c[:3], dtype=np.float32)
+
+
+def _vgrad(top, bot, y0, y1):
+    ys = np.clip((np.arange(BG, dtype=np.float32) - y0) / max(1.0, y1 - y0), 0.0, 1.0)
+    return _rgb(top)[None, :] + (_rgb(bot) - _rgb(top))[None, :] * ys[:, None]   # (BG,3)
+
+
+def _scene(sky_top, sky_bot, floor_top=None, floor_bot=None, horizon=None,
+           vignette=0.45, dither=16.0):
+    """Dithered, vignetted RGBA background with an optional floor plane. Returns
+    (image, draw) so props can be drawn crisply on top of the textured base."""
+    end = horizon if (floor_top is not None and horizon) else BG
+    arr = np.repeat(_vgrad(sky_top, sky_bot, 0, end)[:, None, :], BG, axis=1)   # (BG,BG,3)
+    if floor_top is not None and horizon:
+        fcol = _vgrad(floor_top, floor_bot or P.darker(floor_top, 0.72), horizon, BG)
+        arr[horizon:] = np.repeat(fcol[:, None, :], BG, axis=1)[horizon:]
+    if dither:                       # hide banding + add a subtle retro texture
+        field = np.tile(_BAYER8, ((BG + 7) // 8, (BG + 7) // 8))[:BG, :BG]
+        arr = arr + field[:, :, None] * dither
+    if vignette > 0:                 # frame the round display, pop the pet
+        yy, xx = np.mgrid[0:BG, 0:BG].astype(np.float32)
+        c = (BG - 1) / 2.0
+        r = np.sqrt((xx - c) ** 2 + (yy - c) ** 2) / (BG / 2.0)
+        t = np.clip((r - 0.55) / 0.5, 0.0, 1.0)
+        arr = arr * (1.0 - vignette * (t * t * (3 - 2 * t)))[:, :, None]
+    arr = np.clip(arr, 0, 255).astype(np.uint8)
+    rgba = np.concatenate([arr, np.full((BG, BG, 1), 255, np.uint8)], axis=2)
+    img = Image.fromarray(rgba, "RGBA")
+    return img, ImageDraw.Draw(img)
+
+
+def _stars(d, n, ymax=BG, bright=P.WHITE):
+    for i in range(n):
+        x, y = (i * 97 + 13) % BG, (i * 61 + 29) % ymax
+        dot(d, x, y, 2 if i % 5 == 0 else 1, bright)
+        if i % 7 == 0:
+            d.line([x - 3, y, x + 3, y], fill=bright, width=1)
+            d.line([x, y - 3, x, y + 3], fill=bright, width=1)
+
+
+def _cloud(d, cx, cy, s=1.0):
+    for (dx, dy, rr) in [(-18, 4, 16), (0, 0, 22), (20, 6, 15), (0, 10, 26)]:
+        ellipse(d, int(cx + dx * s), int(cy + dy * s), int(rr * s), int(rr * 0.7 * s), P.WHITE, outline=None)
+
+
+def _window(d, x0, y0, x1, y1):
+    d.rectangle([x0, y0, x1, y1], fill=P.lighter(P.BLUE_L, 0.35), outline=P.WHITE, width=6)
+    _cloud(d, (x0 + x1) // 2 - 10, y0 + 34, 0.45)
+    mx, my = (x0 + x1) // 2, (y0 + y1) // 2
+    d.line([mx, y0, mx, y1], fill=P.WHITE, width=5)
+    d.line([x0, my, x1, my], fill=P.WHITE, width=5)
+
+
+def _plant(d, x, base):
+    d.polygon([(x - 12, base), (x + 12, base), (x + 9, base - 22), (x - 9, base - 22)],
+              fill=P.darker(P.RED, 0.8), outline=P.INK)
+    for (dx, dy) in [(-11, -30), (0, -42), (11, -30), (-5, -38), (6, -38)]:
+        d.polygon([(x, base - 20), (x + dx, base - 20 + dy), (x + dx + 6, base - 16)],
+                  fill=P.GREEN, outline=P.darker(P.GREEN, 0.7))
+
+
+def _rug(d, cx, cy, rx, ry, col):
+    ellipse(d, cx, cy, rx, ry, col, outline=P.darker(col, 0.7), ow=3)
+    ellipse(d, cx, cy, int(rx * 0.6), int(ry * 0.6), P.lighter(col, 0.3), outline=None)
+
+
+def _moon(d, cx, cy, r):
+    ellipse(d, cx, cy, r, r, P.lighter(P.YELLOW, 0.4), outline=None)
+    for (dx, dy, rr) in [(-4, -3, 3), (5, 2, 2), (-2, 6, 2)]:
+        dot(d, cx + dx, cy + dy, rr, P.darker(P.YELLOW, 0.8))
 
 
 def gen_backgrounds(out):
-    def one(name, top, bot, floor=None, extra=None):
-        img, d = _round_bg(top, bot, floor)
-        if extra:
-            extra(d)
+    def finish(name, img, d, props=None):
+        if props:
+            props(d)
         strip([img], {"idle": [0]}, name, out)
 
-    one("bg_room_day", P.lighter(P.BLUE_L, 0.4), P.BLUE_L, P.lighter(P.CREAM, 0.1),
-        lambda d: d.rectangle([300, 120, 400, 220], outline=P.WHITE, width=4))  # window
-    one("bg_room_night", (30, 34, 70, 255), (18, 20, 44, 255), (40, 42, 70, 255),
-        lambda d: [dot(d, 80 + i * 60, 80 + (i % 3) * 40, 2, P.WHITE) for i in range(6)])
-    one("bg_egg", P.lighter(P.LCD_L, 0.3), P.LCD_L, P.lighter(P.CREAM, 0.2))
-    one("bg_shop", P.lighter(P.YELLOW, 0.4), P.YELLOW, P.lighter(P.CREAM, 0.1),
-        lambda d: [d.line([0, 90, 480, 90], fill=P.RED, width=8),
-                   [d.rectangle([40 + i * 70, 60, 90 + i * 70, 90], fill=(P.RED if i % 2 else P.WHITE)) for i in range(6)]])
-    one("bg_game_jump", P.lighter(P.BLUE_L, 0.5), P.BLUE_L, P.GREEN)
-    one("bg_game_guess", P.lighter(P.PURPLE, 0.5), P.PURPLE, P.lighter(P.CREAM, 0.1))
-    one("bg_game_catch", P.lighter(P.LCD_L, 0.4), P.LCD_L, P.lighter(P.CREAM, 0.1))
-    one("bg_ambient", (0, 0, 0, 255), (6, 8, 16, 255))
-    # cosmetics room reskins
-    one("cos_bg_beach", P.lighter(P.BLUE_L, 0.5), (250, 230, 160, 255), (240, 220, 150, 255),
-        lambda d: ellipse(d, 400, 90, 40, 40, P.YELLOW, P.darker(P.YELLOW, 0.8)))
-    one("cos_bg_space", (20, 10, 40, 255), (5, 2, 15, 255), None,
-        lambda d: [dot(d, (i * 53) % 480, (i * 91) % 360, 2, P.WHITE) for i in range(40)] + [ellipse(d, 120, 120, 34, 34, P.PURPLE, P.WHITE)])
+    # Cozy room, day — blue wall, warm wood floor, window, plant, rug
+    img, d = _scene(P.lighter(P.BLUE_L, 0.6), P.BLUE_L,
+                    floor_top=P.lighter(WOOD, 0.2), floor_bot=P.darker(WOOD, 0.8), horizon=330)
+    finish("bg_room_day", img, d, lambda d: (
+        d.line([0, 330, 480, 330], fill=P.darker(WOOD, 0.6), width=4),
+        _window(d, 296, 88, 412, 210), _plant(d, 78, 330),
+        _rug(d, 240, 408, 150, 30, P.PINK_L)))
+
+    # Room, night — deep indigo, moon, stars, dim floor
+    img, d = _scene((44, 48, 92, 255), (22, 24, 52, 255),
+                    floor_top=(52, 54, 82, 255), floor_bot=(30, 32, 56, 255),
+                    horizon=330, vignette=0.5)
+    finish("bg_room_night", img, d, lambda d: (
+        _stars(d, 26, ymax=320), _moon(d, 380, 96, 34),
+        d.line([0, 330, 480, 330], fill=(22, 24, 52, 255), width=4)))
+
+    # Egg incubator — soft LCD green, warm floor
+    img, d = _scene(P.lighter(P.LCD_L, 0.5), P.LCD_L,
+                    floor_top=P.lighter(P.CREAM, 0.2), floor_bot=P.darker(P.CREAM, 0.85),
+                    horizon=340, vignette=0.4)
+    finish("bg_egg", img, d, lambda d: _rug(d, 240, 410, 120, 26, P.lighter(P.LCD_L, 0.2)))
+
+    # Shop — warm yellow, scalloped awning, stocked shelves
+    img, d = _scene(P.lighter(P.YELLOW, 0.5), P.YELLOW,
+                    floor_top=P.lighter(P.CREAM, 0.15), floor_bot=P.darker(P.CREAM, 0.8), horizon=340)
+    def shop(d):
+        for i in range(8):
+            c = P.RED if i % 2 == 0 else P.WHITE
+            d.rectangle([i * 60, 56, i * 60 + 60, 94], fill=c, outline=P.darker(P.RED, 0.7))
+            d.polygon([(i * 60, 94), (i * 60 + 60, 94), (i * 60 + 30, 114)], fill=c, outline=P.darker(P.RED, 0.7))
+        for sy in (180, 258):
+            d.line([40, sy, 440, sy], fill=P.darker(P.CREAM, 0.5), width=6)
+            for j, col in enumerate([P.PINK_D, P.BLUE_D, P.GREEN, P.PURPLE, P.RED]):
+                bx = 62 + j * 76
+                d.rectangle([bx, sy - 26, bx + 34, sy - 2], fill=col, outline=P.INK)
+    finish("bg_shop", img, d, shop)
+
+    # Mini-game stages
+    img, d = _scene(P.lighter(P.BLUE_L, 0.6), P.BLUE_L, floor_top=P.GREEN,
+                    floor_bot=P.darker(P.GREEN, 0.7), horizon=350)
+    finish("bg_game_jump", img, d, lambda d: (_cloud(d, 120, 120, 0.7), _cloud(d, 330, 90, 0.5)))
+    img, d = _scene(P.lighter(P.PURPLE, 0.6), P.PURPLE,
+                    floor_top=P.lighter(P.PURPLE, 0.1), floor_bot=P.darker(P.PURPLE, 0.7), horizon=350)
+    finish("bg_game_guess", img, d, lambda d: _stars(d, 14, ymax=330, bright=P.lighter(P.PURPLE, 0.6)))
+    img, d = _scene(P.lighter(P.LCD_L, 0.5), P.LCD_L,
+                    floor_top=P.lighter(P.CREAM, 0.1), floor_bot=P.darker(P.CREAM, 0.8), horizon=350)
+    finish("bg_game_catch", img, d, None)
+
+    # Always-on / ambient — near-black, flat, low power (no vignette/dither)
+    img, d = _scene((0, 0, 0, 255), (8, 10, 20, 255), vignette=0.0, dither=0.0)
+    finish("bg_ambient", img, d, lambda d: _stars(d, 10, bright=(60, 64, 96, 255)))
+
+    # Beach cosmetic — sky, sea band, sand, sun, cloud
+    img, d = _scene(P.lighter(P.BLUE_L, 0.6), P.lighter(P.BLUE_L, 0.2),
+                    floor_top=(240, 220, 150, 255), floor_bot=(214, 190, 120, 255), horizon=320)
+    def beach(d):
+        d.rectangle([0, 268, 480, 320], fill=P.BLUE_D)
+        d.rectangle([0, 262, 480, 272], fill=P.lighter(P.BLUE_L, 0.3))
+        ellipse(d, 96, 92, 30, 30, P.YELLOW, outline=P.darker(P.YELLOW, 0.8), ow=2)
+        ellipse(d, 96, 92, 20, 20, P.lighter(P.YELLOW, 0.4), outline=None)
+        _cloud(d, 340, 88, 0.6)
+    finish("cos_bg_beach", img, d, beach)
+
+    # Space cosmetic — starfield, ringed planet, moon
+    img, d = _scene((26, 14, 48, 255), (6, 3, 16, 255), vignette=0.55)
+    def space(d):
+        _stars(d, 60, ymax=BG)
+        d.line([100, 152, 200, 148], fill=P.lighter(P.PURPLE, 0.4), width=4)   # ring behind
+        ellipse(d, 150, 150, 44, 44, P.PURPLE, outline=P.WHITE, ow=2)
+        _moon(d, 360, 118, 22)
+    finish("cos_bg_space", img, d, space)
 
 
 # ----------------------------------------------------------------------------- items
