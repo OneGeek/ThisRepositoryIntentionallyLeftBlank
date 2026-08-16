@@ -47,6 +47,25 @@ cp keystore.properties.template keystore.properties   # then edit the values
 Without `keystore.properties`, `assembleRelease` still builds and just emits the
 usual `app-release-unsigned.apk` (install the debug APK to try it on-device).
 
+### One-shot build + screenshot preview
+
+`tools/build.sh` builds a signed release APK **and** renders a 5-up preview PNG
+in one step, both under `app/build/outputs/`:
+
+```bash
+tools/build.sh          # -> TamaWatch.apk + screenshots.png
+tools/build.sh --gen    # regenerate all assets first, then build
+```
+
+`screenshots.png` is a contact sheet of five representative screens (egg, home /
+care ring, sleeping, status, shop) composited from the real generated assets
+using the same layout as the Compose UI — a fast way to eyeball a build without a
+device. Render it on its own anytime with:
+
+```bash
+python3 assets-src/render_screens.py [out.png]
+```
+
 ### Run the engine tests (pure JVM, no device)
 
 ```bash
