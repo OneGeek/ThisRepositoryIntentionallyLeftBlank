@@ -9,8 +9,11 @@
 # eyeballed without a device.
 #
 # Signing: if a keystore.properties exists at the project root it is used as-is;
-# otherwise a throwaway dev key is generated just for this build (fine for
-# sideloading / previews — use your own keystore.properties for real releases).
+# otherwise the shared, committed dev key (tools/dev.keystore) is used. Using one
+# stable key across builds is what lets a sideloaded update install OVER a prior
+# build (a fresh random key each time triggers Android's signature-mismatch and
+# the update silently fails). The dev key is for sideloading/previews only — use
+# your own keystore.properties for real Play releases.
 #
 # Requires: JDK, the Android SDK (ANDROID_HOME or local.properties), Python with
 # Pillow (+ numpy for asset regen). Pass --gen to regenerate assets first.
@@ -31,25 +34,21 @@ if [ "${1:-}" = "--gen" ]; then
 fi
 
 # --- signed release APK ------------------------------------------------------
-THROWAWAY=0
+# Use the caller's keystore.properties if present; otherwise fall back to the
+# committed, stable dev key so updates install over each other.
+TEMP_KS=0
 if [ ! -f keystore.properties ]; then
-  echo "==> No keystore.properties; generating a throwaway dev signing key"
-  keytool -genkeypair -v -keystore "$OUT/dev.jks" -alias tamawatch \
-    -keyalg RSA -keysize 2048 -validity 10000 \
-    -storepass tamadev -keypass tamadev \
-    -dname "CN=TamaWatch Dev, O=TamaWatch, C=US" >/dev/null 2>&1
-  printf 'storeFile=%s\nstorePassword=tamadev\nkeyAlias=tamawatch\nkeyPassword=tamadev\n' \
-    "$OUT/dev.jks" > keystore.properties
-  THROWAWAY=1
+  echo "==> Using shared dev key (tools/dev.keystore)"
+  printf 'storeFile=tools/dev.keystore\nstorePassword=tamadev\nkeyAlias=tamawatch\nkeyPassword=tamadev\n' \
+    > keystore.properties
+  TEMP_KS=1
 fi
 
 echo "==> Building signed release APK"
 ./gradlew :app:assembleRelease --console=plain
 cp app/build/outputs/apk/release/app-release.apk "$OUT/TamaWatch.apk"
 
-if [ "$THROWAWAY" = 1 ]; then
-  rm -f keystore.properties "$OUT/dev.jks"
-fi
+[ "$TEMP_KS" = 1 ] && rm -f keystore.properties
 
 # --- screenshots (always) ----------------------------------------------------
 echo "==> Rendering screenshots"

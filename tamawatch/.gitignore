@@ -19,3 +19,6 @@ __pycache__/
 *.jks
 *.keystore
 keystore.properties
+# ...except the shared throwaway DEV key, so sideloaded builds keep a stable
+# signature and can install over each other. NOT for Play — use your own key.
+!tools/dev.keystore
