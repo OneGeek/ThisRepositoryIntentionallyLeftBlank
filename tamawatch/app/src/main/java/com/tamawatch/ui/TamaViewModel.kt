@@ -37,7 +37,6 @@ class TamaViewModel(
 
     var screen by mutableStateOf(Screen.Home)
         private set
-    var ringIndex by mutableIntStateOf(0)
     var cutscene by mutableStateOf<Cutscene?>(null)
         private set
 

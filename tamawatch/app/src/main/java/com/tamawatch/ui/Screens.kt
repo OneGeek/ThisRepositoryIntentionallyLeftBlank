@@ -50,8 +50,6 @@ fun poseFor(pet: Pet): Pair<String, String> {
     }
 }
 
-private data class RingAction(val icon: String, val label: String, val onGo: () -> Unit, val alert: Boolean = false)
-
 /** Selectable floor rugs the pet/egg stands on. id 0 = no rug. */
 data class RugStyle(val id: Int, val asset: String?, val name: String)
 
@@ -104,9 +102,10 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
             return@Box
         }
 
-        // Care ring + centered pet, then the status ON TOP so a jumping pet slips
-        // behind the meters instead of being clipped.
-        CareRing(vm, pet, rugId)
+        // Centered pet, the touch-first radial menu around it, then the status ON
+        // TOP so a jumping pet slips behind the meters instead of being clipped.
+        PetCenter(vm, pet, rugId)
+        RadialMenu(vm, pet)
         TopStatus(pet)
     }
 }
@@ -126,82 +125,26 @@ private fun BoxScope.TopStatus(pet: Pet) {
     }
 }
 
+/** The centered pet on its rug; long-press to pet it. The menu lives in RadialMenu. */
 @Composable
-private fun CareRing(vm: TamaViewModel, pet: Pet, rugId: Int) {
-    val actions = listOf(
-        RingAction("ic_feed", "Feed", { vm.go(Screen.Feed) }, alert = pet.stats.hunger <= Tuning.CRIT),
-        RingAction("ic_play", "Play", { vm.go(Screen.PlayMenu) }),
-        RingAction("ic_bathroom", "Clean", { vm.clean() }, alert = pet.stats.dirty),
-        RingAction("ic_medicine", "Medicine", { vm.heal() }, alert = pet.stats.sick),
-        RingAction("ic_light", if (pet.lightOn) "Lights off" else "Lights on", { vm.toggleLight() }),
-        RingAction("ic_status", "Status", { vm.go(Screen.Status) }),
-        RingAction("ic_shop", "Shop", { vm.go(Screen.Shop) }),
-        RingAction("ic_steps", "Steps", { vm.go(Screen.Steps) }),
-        RingAction("ic_discipline", "Scold", { vm.scold() }),
-        RingAction("ic_settings", "Settings", { vm.go(Screen.Settings) }),
-    )
-    val sel = vm.ringIndex.mod(actions.size)
-
-    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val density = LocalDensity.current
-        val radiusPx = with(density) { (maxWidth * 0.40f).toPx() }
-
-        // Lay the actions on a horseshoe with a gap at the top so no button sits
-        // under the status meters at 12 o'clock.
-        val gapDeg = 90.0
-        val stepDeg = (360.0 - gapDeg) / (actions.size - 1)
-        actions.forEachIndexed { i, a ->
-            val ang = Math.toRadians(-90.0 + gapDeg / 2 + i * stepDeg)
-            val x = (radiusPx * cos(ang)).roundToInt()
-            val y = (radiusPx * sin(ang)).roundToInt()
-            Box(
-                Modifier
-                    .offset { IntOffset(x, y) }
-                    .size(if (i == sel) 40.dp else 32.dp)
-                    .clickable { a.onGo() },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (i == sel) PixelSprite("ui_selector", "pulse", 3, Modifier.fillMaxSize())
-                // Icons are self-contained colored chips, so they read on any background.
-                PixelFrame(a.icon, 0, Modifier.size(if (i == sel) 34.dp else 27.dp))
-                // Attention badge: a small red dot (an opaque chip would hide a wash).
-                if (a.alert) Box(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .size(11.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFDF3E3E))
-                        .border(1.5.dp, Color.White, CircleShape),
-                )
-            }
-        }
-
-        // Center: pet + highlighted label. Nudged down a touch so the pet's resting
-        // head clears the status; a jump then rises up behind those meters.
-        Column(Modifier.offset(y = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            val (id, tag) = poseFor(pet)
-            Box(
-                Modifier
-                    .size(96.dp)
-                    .pointerInput(sel, pet.species) {
-                        detectTapGestures(
-                            onTap = { actions[sel].onGo() },
-                            onLongPress = { vm.petIt() },
-                        )
-                    },
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                // Ground under the feet (behind the pet): rug + soft contact shadow.
-                Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
-                // Feet pinned to the bottom; the frame's headroom overflows upward.
-                PetSprite(id, tag, 3, Modifier.align(Alignment.BottomCenter))
-                if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
-                if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
-                if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
-                if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
-            }
-            Text(actions[sel].label, style = MaterialTheme.typography.caption1, textAlign = TextAlign.Center)
-        }
+private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
+    val (id, tag) = poseFor(pet)
+    Box(
+        Modifier
+            .align(Alignment.Center)
+            .offset(y = 14.dp)
+            .size(96.dp)
+            .pointerInput(pet.species) { detectTapGestures(onLongPress = { vm.petIt() }) },
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        // Ground under the feet (behind the pet): rug + soft contact shadow.
+        Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
+        // Feet pinned to the bottom; the frame's headroom overflows upward.
+        PetSprite(id, tag, 3, Modifier.align(Alignment.BottomCenter))
+        if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
+        if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
+        if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
+        if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
     }
 }
 

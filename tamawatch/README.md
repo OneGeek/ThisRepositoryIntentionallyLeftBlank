@@ -2,7 +2,7 @@
 
 A faithful homage to the **Tamagotchi Smart (2021)**, built for the **Samsung Galaxy Watch Ultra (2025)** and any Wear OS 5 device. Hatch an egg on your wrist, keep it fed / happy / clean / healthy across real days, walk to earn Gotchi Points, and raise it through a branching evolution tree — one generation to the next.
 
-> **Why the Tamagotchi Smart?** It is itself a round, wrist-worn, color-touchscreen virtual pet with a built-in pedometer, so its hardware and interaction model map 1:1 onto the Watch Ultra (480×480 round AMOLED, rotating bezel, touch, step counter, haptics, mic). TamaWatch reproduces its *mechanics*, with entirely **original** art (clean anti-aliased vector-style illustration), names, and sound — not copyrighted assets.
+> **Why the Tamagotchi Smart?** It is itself a round, wrist-worn, color-touchscreen virtual pet with a built-in pedometer, so its hardware and interaction model map 1:1 onto the Watch Ultra (480×480 round AMOLED, touch, step counter, haptics, mic). TamaWatch reproduces its *mechanics*, with entirely **original** art (clean anti-aliased vector-style illustration), names, and sound — not copyrighted assets.
 
 ## Play it right now (no build needed)
 

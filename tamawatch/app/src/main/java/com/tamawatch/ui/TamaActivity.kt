@@ -7,17 +7,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamawatch.background.TickWorker
@@ -51,23 +46,8 @@ class TamaActivity : ComponentActivity() {
                 }
             }
 
-            val focus = remember { FocusRequester() }
-            LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-
             ProvidePixel(c.spriteBank, settings.reduceMotion) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.Black)
-                        .onRotaryScrollEvent { ev ->
-                            if (vm.screen == Screen.Home) {
-                                vm.ringIndex += if (ev.verticalScrollPixels > 0) 1 else -1
-                                true
-                            } else false
-                        }
-                        .focusRequester(focus)
-                        .focusable(),
-                ) {
+                Box(Modifier.fillMaxSize().background(Color.Black)) {
                     WearApp(vm)
                 }
             }

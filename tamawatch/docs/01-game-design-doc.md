@@ -1,7 +1,9 @@
 # TamaWatch — Game Design Document
 
 **Version:** 1.0
-**Target device:** Samsung Galaxy Watch Ultra (2025) — Wear OS 5 (Android 14), Exynos W1000, 1.5" circular AMOLED, 480×480 px, rotating bezel, touch, haptics, step counter, microphone, heart-rate sensor.
+**Target device:** Samsung Galaxy Watch Ultra (2025) — Wear OS 5 (Android 14), Exynos W1000, 1.5" circular AMOLED, 480×480 px, touch, haptics, step counter, microphone, heart-rate sensor.
+
+> **Correction:** the Galaxy Watch Ultra has no rotating bezel, so navigation is **touch-first**. The care ring was replaced by a touch **peek-and-hold** menu: press-and-hold (or drag toward the center) a category hub to reveal its name and confirm; sub-actions are labeled lists. The "bezel / rotary" references below are superseded.
 **Genre:** Virtual-pet / life-sim (real-time, always-on care loop).
 **Reproduction target:** Tamagotchi Smart (2021) — chosen because it is itself a round-screen, wrist-worn, color-touchscreen virtual pet with a built-in pedometer, so its hardware and interaction model map 1:1 onto the Watch Ultra.
 **IP note:** TamaWatch is an original homage. All characters, names, sprites, and sounds are original works created for this project. It reproduces the *mechanics and interaction model* of the Tamagotchi Smart, not its copyrighted assets or trademarks.

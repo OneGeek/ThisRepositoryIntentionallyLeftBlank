@@ -14,7 +14,7 @@ Default out: ../app/build/outputs/screenshots.png (git-ignored with build/).
 import os
 import sys
 import json
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import palette as P
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -126,28 +126,41 @@ def meters(base, hunger=3, happy=4, gp=120, steps=3240):
     text(d, W / 2 + 36, by - 10, str(steps), 22, center=False)
 
 
-def care_ring(base, sel=0):
+def care_ring(base, pressed=2, progress=0.55):
+    """Five category hubs on a horseshoe; `pressed` shows a peek-in-progress with
+    a partial gold confirm-ring (touch-first peek-hold menu)."""
     import math
-    icons = ["ic_feed", "ic_play", "ic_bathroom", "ic_medicine", "ic_light",
-             "ic_status", "ic_shop", "ic_steps", "ic_discipline", "ic_settings"]
-    alerts = {0}  # Feed alerting (hungry)
-    r = 0.40 * W
-    gap, n = 90.0, len(icons)                      # leave a gap at the top for the status
-    step = (360.0 - gap) / (n - 1)
-    for i, ic in enumerate(icons):
-        ang = math.radians(-90 + gap / 2 + i * step)
-        cx, cy = W / 2 + r * math.cos(ang), W / 2 + r * math.sin(ang)
-        selected = (i == sel)
-        sz = 44 if selected else 34
-        if selected:
-            sprite(base, "ui_selector", cx, cy, 52)
+    hubs = [("ic_settings", 216), ("ic_shop", 154), ("ic_feed", 90),
+            ("ic_play", 26), ("ic_status", -36)]
+    names = ["Settings", "Shop", "Care", "Play", "Stats"]
+    r = 0.35 * W
+    d = ImageDraw.Draw(base)
+    for i, (ic, ang) in enumerate(hubs):
+        a = math.radians(ang)
+        cx, cy = W / 2 + r * math.cos(a), W / 2 + r * math.sin(a)
+        sz = 56 if i == pressed else 42
         sprite(base, ic, cx, cy, sz)
-        if i in alerts:                        # small red badge dot (top-right)
-            bx, by = cx + sz * 0.30, cy - sz * 0.30
-            ImageDraw.Draw(base).ellipse([bx - 7, by - 7, bx + 7, by + 7],
-                                         fill=(223, 62, 62, 255), outline=(255, 255, 255, 255), width=2)
-    return ["Feed", "Play", "Clean", "Medicine", "Lights", "Status", "Shop",
-            "Steps", "Scold", "Settings"][sel]
+        if i == pressed:
+            m = sz / 2 + 5
+            d.arc([cx - m, cy - m, cx + m, cy + m], -90, -90 + 360 * progress,
+                  fill=(242, 193, 78, 255), width=6)
+    return names[pressed]
+
+
+def capsule(base, cx, cy, s):
+    """The menu-name capsule that fades in at the center during a peek."""
+    d = ImageDraw.Draw(base)
+    f = _font(30)
+    bb = d.textbbox((0, 0), s, font=f)
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    px, py = 26, 13
+    x0, y0, x1, y1 = cx - tw / 2 - px, cy - th / 2 - py, cx + tw / 2 + px, cy + th / 2 + py
+    rad = (y1 - y0) / 2
+    sh = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle([x0, y0 + 7, x1, y1 + 7], radius=rad, fill=(0, 0, 0, 150))
+    base.alpha_composite(sh.filter(ImageFilter.GaussianBlur(7)))
+    d.rounded_rectangle([x0, y0, x1, y1], radius=rad, fill=(23, 26, 40, 255), outline=(255, 255, 255, 42), width=2)
+    text(d, cx, y0 + py - bb[1], s, 30)
 
 
 def panel(base, x0, y0, x1, y1, fill=(26, 28, 46, 232)):
@@ -186,11 +199,12 @@ def s_egg():
 
 def s_home_day():
     img = screen_bg("bg_room_day")
-    label = care_ring(img, sel=0)
+    care_ring(img, pressed=2, progress=0.55)      # peeking the "Care" hub
     ground(img, W / 2, 300, 150, rug="rug_rose")
     pet_bottom(img, "spr_baby", W / 2, 302, 108, tag="idle")
-    meters(img, hunger=3, happy=4)          # drawn last -> in front of the pet
-    return img, "Home - grounded + rug"
+    capsule(img, W / 2, W * 0.43, "Care")         # name fades in at center
+    meters(img, hunger=3, happy=4)                # drawn last -> in front
+    return img, "Home - peek-hold menu"
 
 
 def s_sleeping():
