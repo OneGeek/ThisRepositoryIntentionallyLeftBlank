@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -34,9 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -184,40 +189,52 @@ fun RadialMenu(vm: TamaViewModel, pet: Pet) {
                     },
             ) {
                 PixelFrame(hub.icon, 0, Modifier.fillMaxSize())
-                if (i == pressed) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        val sw = 5.dp.toPx()
-                        drawArc(
-                            color = Gold, startAngle = -90f, sweepAngle = progress * 360f, useCenter = false,
-                            topLeft = Offset(sw / 2f, sw / 2f),
-                            size = Size(size.width - sw, size.height - sw),
-                            style = Stroke(width = sw, cap = StrokeCap.Round),
-                        )
-                    }
-                }
             }
         }
 
-        // Center capsule with the pressed hub's name (fades in fast).
+        // Center capsule with the pressed hub's name (fades in fast); the gold
+        // progress ring encircles the capsule, not the hub under the finger.
         if (pressed in hubs.indices) {
             Box(
                 Modifier
                     .align(Alignment.Center)
                     .offset(y = (-4).dp)
                     .alpha(labelAlpha)
-                    .graphicsLayer { val s = 0.92f + 0.08f * labelAlpha; scaleX = s; scaleY = s }
-                    .shadow(12.dp, RoundedCornerShape(50), clip = false)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFF171A28))
-                    .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(50))
-                    .padding(horizontal = 22.dp, vertical = 9.dp),
+                    .graphicsLayer { val s = 0.92f + 0.08f * labelAlpha; scaleX = s; scaleY = s },
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    hubs[pressed].name,
-                    style = MaterialTheme.typography.title2,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF6F2EA),
-                )
+                Box(
+                    Modifier
+                        .padding(7.dp)
+                        .shadow(12.dp, RoundedCornerShape(50), clip = false)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFF171A28))
+                        .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(50))
+                        .padding(horizontal = 22.dp, vertical = 9.dp),
+                ) {
+                    Text(
+                        hubs[pressed].name,
+                        style = MaterialTheme.typography.title2,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFF6F2EA),
+                    )
+                }
+                // Gold progress ring hugging the capsule's pill outline.
+                Canvas(Modifier.matchParentSize()) {
+                    val sw = 4.dp.toPx()
+                    val half = sw / 2f
+                    val rad = (size.height - sw) / 2f
+                    val rr = RoundRect(
+                        left = half, top = half,
+                        right = size.width - half, bottom = size.height - half,
+                        cornerRadius = CornerRadius(rad, rad),
+                    )
+                    val path = Path().apply { addRoundRect(rr) }
+                    val pm = PathMeasure().apply { setPath(path, false) }
+                    val seg = Path()
+                    pm.getSegment(0f, pm.length * progress, seg, true)
+                    drawPath(seg, color = Gold, style = Stroke(width = sw, cap = StrokeCap.Round))
+                }
             }
         }
 
@@ -249,7 +266,11 @@ private fun BoxScope.SubmenuSheet(hub: Hub, onClose: () -> Unit) {
     ) {
         Text(hub.name, style = MaterialTheme.typography.title3, fontWeight = FontWeight.Bold)
         Column(
-            Modifier.fillMaxWidth().padding(top = 10.dp),
+            Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(top = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             hub.items.forEach { item -> MenuRow(item, onClose) }

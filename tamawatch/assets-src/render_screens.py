@@ -126,29 +126,26 @@ def meters(base, hunger=3, happy=4, gp=120, steps=3240):
     text(d, W / 2 + 36, by - 10, str(steps), 22, center=False)
 
 
-def care_ring(base, pressed=2, progress=0.55):
-    """Five category hubs on a horseshoe; `pressed` shows a peek-in-progress with
-    a partial gold confirm-ring (touch-first peek-hold menu)."""
+def care_ring(base, pressed=2):
+    """Five category hubs on a horseshoe; `pressed` gets a subtle grow (the finger
+    is over it). The gold confirm-ring is drawn around the center capsule instead,
+    since the pressed hub sits under the fingertip (touch-first peek-hold menu)."""
     import math
     hubs = [("ic_settings", 216), ("ic_shop", 154), ("ic_feed", 90),
             ("ic_play", 26), ("ic_status", -36)]
     names = ["Settings", "Shop", "Care", "Play", "Stats"]
     r = 0.35 * W
-    d = ImageDraw.Draw(base)
     for i, (ic, ang) in enumerate(hubs):
         a = math.radians(ang)
         cx, cy = W / 2 + r * math.cos(a), W / 2 + r * math.sin(a)
-        sz = 56 if i == pressed else 42
+        sz = 52 if i == pressed else 42
         sprite(base, ic, cx, cy, sz)
-        if i == pressed:
-            m = sz / 2 + 5
-            d.arc([cx - m, cy - m, cx + m, cy + m], -90, -90 + 360 * progress,
-                  fill=(242, 193, 78, 255), width=6)
     return names[pressed]
 
 
-def capsule(base, cx, cy, s):
-    """The menu-name capsule that fades in at the center during a peek."""
+def capsule(base, cx, cy, s, progress=0.55):
+    """The menu-name capsule that fades in at the center during a peek, encircled
+    by the gold progress ring that fills as the hold/drag commits."""
     d = ImageDraw.Draw(base)
     f = _font(30)
     bb = d.textbbox((0, 0), s, font=f)
@@ -161,6 +158,56 @@ def capsule(base, cx, cy, s):
     base.alpha_composite(sh.filter(ImageFilter.GaussianBlur(7)))
     d.rounded_rectangle([x0, y0, x1, y1], radius=rad, fill=(23, 26, 40, 255), outline=(255, 255, 255, 42), width=2)
     text(d, cx, y0 + py - bb[1], s, 30)
+    # gold ring hugging the pill, filling clockwise from the top with `progress`.
+    g = 7   # gap between capsule edge and ring
+    rr = [x0 - g, y0 - g, x1 + g, y1 + g]
+    rrad = (rr[3] - rr[1]) / 2
+    _pill_progress(base, rr, rrad, progress, (242, 193, 78, 255), 6)
+
+
+def _pill_progress(base, box, rad, frac, color, width):
+    """Draw the first `frac` of a rounded-rectangle (pill) outline, clockwise from
+    the top-center, approximating the Compose PathMeasure segment."""
+    import math
+    x0, y0, x1, y1 = box
+    frac = max(0.0, min(1.0, frac))
+    if frac <= 0:
+        return
+    # perimeter as straight top/bottom runs + two semicircle caps
+    straight = (x1 - rad) - (x0 + rad)            # each flat run length
+    arc = math.pi * rad                            # each semicircle length
+    total = 2 * straight + 2 * arc
+    want = total * frac
+    # walk clockwise from top-center: right along top -> right cap -> back along
+    # bottom -> left cap -> up to start.
+    cxl, cxr = x0 + rad, x1 - rad
+    cyt, cyb = y0 + rad, y1 - rad
+    pts = []
+    n = 220
+    for k in range(n + 1):
+        dist = total * (k / n)
+        if dist > want:
+            break
+        seg = dist
+        half = straight / 2
+        if seg <= half:                            # top: center -> right
+            pts.append((cxl + half + seg, y0))
+        elif seg <= half + arc:                    # right cap
+            t = (seg - half) / arc
+            ang = -math.pi / 2 + math.pi * t
+            pts.append((cxr + rad * math.cos(ang), (cyt + cyb) / 2 + rad * math.sin(ang)))
+        elif seg <= half + arc + straight:         # bottom: right -> left
+            t = seg - (half + arc)
+            pts.append((cxr - t, y1))
+        elif seg <= half + arc + straight + arc:   # left cap
+            t = (seg - (half + arc + straight)) / arc
+            ang = math.pi / 2 + math.pi * t
+            pts.append((cxl + rad * math.cos(ang), (cyt + cyb) / 2 + rad * math.sin(ang)))
+        else:                                      # top: left -> center
+            t = seg - (half + arc + straight + arc)
+            pts.append((cxl + t, y0))
+    if len(pts) >= 2:
+        ImageDraw.Draw(base).line(pts, fill=color, width=width, joint="curve")
 
 
 def panel(base, x0, y0, x1, y1, fill=(26, 28, 46, 232)):
@@ -199,10 +246,10 @@ def s_egg():
 
 def s_home_day():
     img = screen_bg("bg_room_day")
-    care_ring(img, pressed=2, progress=0.55)      # peeking the "Care" hub
+    care_ring(img, pressed=2)                     # peeking the "Care" hub
     ground(img, W / 2, 300, 150, rug="rug_rose")
     pet_bottom(img, "spr_baby", W / 2, 302, 108, tag="idle")
-    capsule(img, W / 2, W * 0.43, "Care")         # name fades in at center
+    capsule(img, W / 2, W * 0.43, "Care", progress=0.62)  # name + ring at center
     meters(img, hunger=3, happy=4)                # drawn last -> in front
     return img, "Home - peek-hold menu"
 
