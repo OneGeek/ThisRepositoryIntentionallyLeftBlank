@@ -316,6 +316,17 @@
     ]
    }
   },
+  "fx_shadow": {
+   "file": "fx_shadow.png",
+   "frameH": 160,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
   "fx_star": {
    "file": "fx_star.png",
    "frameH": 64,
@@ -796,6 +807,72 @@
     "idle": [
      0,
      1
+    ]
+   }
+  },
+  "rug_cream": {
+   "file": "rug_cream.png",
+   "frameH": 176,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "rug_moss": {
+   "file": "rug_moss.png",
+   "frameH": 176,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "rug_night": {
+   "file": "rug_night.png",
+   "frameH": 176,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "rug_rose": {
+   "file": "rug_rose.png",
+   "frameH": 176,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "rug_royal": {
+   "file": "rug_royal.png",
+   "frameH": 176,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
+    ]
+   }
+  },
+  "rug_sky": {
+   "file": "rug_sky.png",
+   "frameH": 176,
+   "frameW": 480,
+   "frames": 1,
+   "tags": {
+    "idle": [
+     0
     ]
    }
   },

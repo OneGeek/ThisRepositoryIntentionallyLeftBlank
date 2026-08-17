@@ -43,6 +43,8 @@ EXPECT_ART |= {"item_meal_bread", "item_meal_bowl", "item_meal_fish", "item_meal
 EXPECT_ART |= {"game_obstacle", "game_arrow_l", "game_arrow_r", "game_basket",
                "game_treat_good", "game_treat_bad"}
 EXPECT_ART |= {"cut_hatch", "cut_evolve", "cut_farewell", "fx_star", "fx_goal"}
+EXPECT_ART |= {"fx_shadow", "rug_rose", "rug_sky", "rug_moss", "rug_cream",
+               "rug_royal", "rug_night"}
 
 EXPECT_SND = {"sfx_select", "sfx_confirm", "sfx_cancel", "sfx_error",
               "sfx_eat", "sfx_drink", "sfx_refuse", "sfx_flush", "sfx_heal", "sfx_pet",

@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class Screen { Home, Feed, PlayMenu, Jump, Guess, Catch, Status, Shop, Steps, Settings, Help }
+enum class Screen { Home, Feed, PlayMenu, Jump, Guess, Catch, Status, Shop, Steps, Settings, Help, Rugs }
 
 sealed interface Cutscene {
     data object Hatch : Cutscene
@@ -92,6 +92,7 @@ class TamaViewModel(
     fun setSound(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(soundOn = on) } }
     fun setReduceMotion(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(reduceMotion = on) } }
     fun setMic(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(micEnabled = on) } }
+    fun setRug(id: Int) = viewModelScope.launch { settingsStore.update { it.copy(rugId = id) } }
 
     class Factory(
         private val repository: Repository,

@@ -24,7 +24,7 @@ fun WearApp(vm: TamaViewModel) {
             val ownsBeach = (inventory["cos_beach"] ?: 0) > 0
             val ownsSpace = (inventory["cos_space"] ?: 0) > 0
             when (vm.screen) {
-                Screen.Home -> HomeScreen(vm, current, ownsBeach, ownsSpace)
+                Screen.Home -> HomeScreen(vm, current, ownsBeach, ownsSpace, settings.rugId)
                 Screen.Feed -> FeedScreen(vm, inventory)
                 Screen.PlayMenu -> PlayMenu(vm)
                 Screen.Jump -> JumpGame(vm, current)
@@ -35,6 +35,7 @@ fun WearApp(vm: TamaViewModel) {
                 Screen.Steps -> StepsScreen(vm, current)
                 Screen.Settings -> SettingsScreen(vm, settings)
                 Screen.Help -> HelpScreen(vm)
+                Screen.Rugs -> RugScreen(vm, settings.rugId)
             }
         }
     }

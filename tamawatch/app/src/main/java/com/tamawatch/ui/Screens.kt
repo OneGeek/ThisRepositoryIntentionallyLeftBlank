@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.Button
@@ -50,8 +52,33 @@ fun poseFor(pet: Pet): Pair<String, String> {
 
 private data class RingAction(val icon: String, val label: String, val onGo: () -> Unit, val alert: Boolean = false)
 
+/** Selectable floor rugs the pet/egg stands on. id 0 = no rug. */
+data class RugStyle(val id: Int, val asset: String?, val name: String)
+
+val Rugs = listOf(
+    RugStyle(0, null, "None"),
+    RugStyle(1, "rug_rose", "Rose"),
+    RugStyle(2, "rug_sky", "Sky"),
+    RugStyle(3, "rug_moss", "Moss"),
+    RugStyle(4, "rug_cream", "Cream"),
+    RugStyle(5, "rug_royal", "Royal"),
+    RugStyle(6, "rug_night", "Night"),
+)
+
+fun rugAsset(id: Int): String? = Rugs.firstOrNull { it.id == id }?.asset
+fun rugName(id: Int): String = Rugs.firstOrNull { it.id == id }?.name ?: "None"
+
+/** A selected rug plus a soft contact shadow, drawn under the pet/egg's feet. */
 @Composable
-fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean) {
+fun Ground(rugId: Int, width: Dp, modifier: Modifier = Modifier) {
+    Box(modifier.width(width), contentAlignment = Alignment.BottomCenter) {
+        rugAsset(rugId)?.let { PixelFrame(it, 0, Modifier.fillMaxWidth()) }
+        PixelFrame("fx_shadow", 0, Modifier.fillMaxWidth(0.86f))
+    }
+}
+
+@Composable
+fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean, rugId: Int) {
     val bg = when {
         pet.stage == Stage.EGG -> "bg_egg"
         pet.asleep || !pet.lightOn -> "bg_room_night"
@@ -64,10 +91,14 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
 
         if (pet.stage == Stage.EGG) {
             TopStatus(pet)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                PixelSprite("spr_egg", "wiggle", 2, Modifier.size(108.dp))
+            Column(Modifier.offset(y = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(contentAlignment = Alignment.BottomCenter) {
+                    Ground(rugId, 116.dp, Modifier.align(Alignment.BottomCenter).offset(y = 6.dp))
+                    PixelSprite("spr_egg", "wiggle", 2, Modifier.size(104.dp))
+                }
+                Spacer(Modifier.height(4.dp))
                 Text("${pet.name}'s egg…", style = MaterialTheme.typography.caption1)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 CompactChip(onClick = { vm.hatchNow() }, label = { Text("Hatch now") })
             }
             return@Box
@@ -75,7 +106,7 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
 
         // Care ring + centered pet, then the status ON TOP so a jumping pet slips
         // behind the meters instead of being clipped.
-        CareRing(vm, pet)
+        CareRing(vm, pet, rugId)
         TopStatus(pet)
     }
 }
@@ -96,7 +127,7 @@ private fun BoxScope.TopStatus(pet: Pet) {
 }
 
 @Composable
-private fun CareRing(vm: TamaViewModel, pet: Pet) {
+private fun CareRing(vm: TamaViewModel, pet: Pet, rugId: Int) {
     val actions = listOf(
         RingAction("ic_feed", "Feed", { vm.go(Screen.Feed) }, alert = pet.stats.hunger <= Tuning.CRIT),
         RingAction("ic_play", "Play", { vm.go(Screen.PlayMenu) }),
@@ -160,6 +191,8 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
                     },
                 contentAlignment = Alignment.BottomCenter,
             ) {
+                // Ground under the feet (behind the pet): rug + soft contact shadow.
+                Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
                 // Feet pinned to the bottom; the frame's headroom overflows upward.
                 PetSprite(id, tag, 3, Modifier.align(Alignment.BottomCenter))
                 if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
@@ -265,7 +298,35 @@ fun SettingsScreen(vm: TamaViewModel, s: com.tamawatch.core.data.Settings) {
         item { Button(onClick = { vm.setReduceMotion(!s.reduceMotion) }, modifier = Modifier.fillMaxWidth()) { Text("Reduce motion: ${if (s.reduceMotion) "On" else "Off"}") } }
         item { Button(onClick = { vm.setMic(!s.micEnabled) }, modifier = Modifier.fillMaxWidth()) { Text("Mic talk: ${if (s.micEnabled) "On" else "Off"}") } }
         item { Text("Sleep ${s.sleep.startHour}:00–${s.sleep.endHour}:00", style = MaterialTheme.typography.caption2) }
+        item { Button(onClick = { vm.go(Screen.Rugs) }, modifier = Modifier.fillMaxWidth()) { Text("Rug: ${rugName(s.rugId)}") } }
         item { Button(onClick = { vm.go(Screen.Help) }, modifier = Modifier.fillMaxWidth()) { Text("Help: what the icons mean") } }
+        item { BackButton(vm) }
+    }
+}
+
+/** Rug picker: tap a rug to stand your pet on it. */
+@Composable
+fun RugScreen(vm: TamaViewModel, current: Int) {
+    ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        item { Text("Choose a rug", style = MaterialTheme.typography.title3) }
+        Rugs.forEach { r ->
+            item {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (r.id == current) Color(0x33FFFFFF) else Color(0x22000000))
+                        .clickable { vm.setRug(r.id) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (r.asset != null) PixelFrame(r.asset, 0, Modifier.width(46.dp).height(20.dp))
+                    else Box(Modifier.width(46.dp).height(20.dp))
+                    Text(r.name, style = MaterialTheme.typography.button, modifier = Modifier.weight(1f))
+                    if (r.id == current) Text("✓", style = MaterialTheme.typography.title3)
+                }
+            }
+        }
         item { BackButton(vm) }
     }
 }

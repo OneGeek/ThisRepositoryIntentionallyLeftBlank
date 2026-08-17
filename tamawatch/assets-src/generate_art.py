@@ -10,7 +10,7 @@ import os
 import math
 import functools
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import palette as P
 
 MANIFEST = {}
@@ -719,27 +719,27 @@ def gen_backgrounds(out):
             props(d)
         strip([img], {"idle": [0]}, name, out)
 
-    # Cozy room, day — blue wall, warm wood floor, window, plant, rug
+    # Cozy room, day — blue wall, a generous warm wood floor to stand on, window, plant.
+    # (Floor raised so the pet is clearly grounded; the floor rug is now selectable.)
     img, d = _scene(P.lighter(P.BLUE_L, 0.6), P.BLUE_L,
-                    floor_top=P.lighter(WOOD, 0.2), floor_bot=P.darker(WOOD, 0.8), horizon=330)
+                    floor_top=P.lighter(WOOD, 0.2), floor_bot=P.darker(WOOD, 0.8), horizon=272)
     finish("bg_room_day", img, d, lambda d: (
-        d.line([0, 330, 480, 330], fill=P.darker(WOOD, 0.6), width=4),
-        _window(d, 296, 88, 412, 210), _plant(d, 78, 330),
-        _rug(d, 240, 408, 150, 30, P.PINK_L)))
+        d.line([0, 272, 480, 272], fill=P.darker(WOOD, 0.6), width=4),
+        _window(d, 300, 74, 416, 196), _plant(d, 66, 272)))
 
-    # Room, night — deep indigo, moon, stars, dim floor
+    # Room, night — deep indigo, moon, stars, generous dim floor
     img, d = _scene((44, 48, 92, 255), (22, 24, 52, 255),
                     floor_top=(52, 54, 82, 255), floor_bot=(30, 32, 56, 255),
-                    horizon=330, vignette=0.5)
+                    horizon=272, vignette=0.5)
     finish("bg_room_night", img, d, lambda d: (
-        _stars(d, 26, ymax=320), _moon(d, 380, 96, 34),
-        d.line([0, 330, 480, 330], fill=(22, 24, 52, 255), width=4)))
+        _stars(d, 26, ymax=258), _moon(d, 384, 88, 34),
+        d.line([0, 272, 480, 272], fill=(22, 24, 52, 255), width=4)))
 
-    # Egg incubator — soft LCD green, warm floor
+    # Egg incubator — soft LCD green, generous warm floor
     img, d = _scene(P.lighter(P.LCD_L, 0.5), P.LCD_L,
                     floor_top=P.lighter(P.CREAM, 0.2), floor_bot=P.darker(P.CREAM, 0.85),
-                    horizon=340, vignette=0.4)
-    finish("bg_egg", img, d, lambda d: _rug(d, 240, 410, 120, 26, P.lighter(P.LCD_L, 0.2)))
+                    horizon=278, vignette=0.4)
+    finish("bg_egg", img, d, lambda d: d.line([0, 278, 480, 278], fill=P.darker(P.CREAM, 0.6), width=4))
 
     # Shop — warm yellow, scalloped awning, stocked shelves
     img, d = _scene(P.lighter(P.YELLOW, 0.5), P.YELLOW,
@@ -790,6 +790,33 @@ def gen_backgrounds(out):
         ellipse(d, 150, 150, 44, 44, P.PURPLE, outline=P.WHITE, ow=2)
         _moon(d, 360, 118, 22)
     finish("cos_bg_space", img, d, space)
+
+
+# ----------------------------------------------------------------------------- ground
+def gen_ground(out):
+    """A soft contact shadow + a set of selectable floor rugs the pet stands on."""
+    # soft blurred contact shadow
+    img, d = cell(120, 40)
+    d.ellipse([10, 8, 110, 32], fill=(0, 0, 0, 150), outline=None)
+    img = img.filter(ImageFilter.GaussianBlur(SS * 5))
+    strip([img], {"idle": [0]}, "fx_shadow", out)
+
+    # oval rugs (top-down), a few palette-cohesive styles
+    def rug(name, base, inner, border=None, deco=None):
+        img, d = cell(120, 44)
+        d.ellipse([6, 6, 114, 38], fill=base, outline=border or P.darker(base, 0.7), width=3)
+        d.ellipse([30, 13, 90, 31], fill=inner, outline=None)
+        if deco:
+            deco(d)
+        strip([img], {"idle": [0]}, name, out)
+
+    rug("rug_rose", P.PINK_D, P.PINK_L)
+    rug("rug_sky", P.BLUE_D, P.BLUE_L)
+    rug("rug_moss", P.GREEN, P.lighter(P.GREEN, 0.4))
+    rug("rug_cream", P.CREAM, P.lighter(P.CREAM, 0.35), border=P.darker(P.CREAM, 0.6))
+    rug("rug_royal", P.PURPLE, P.lighter(P.PURPLE, 0.4), border=P.YELLOW)
+    rug("rug_night", (34, 38, 78, 255), (52, 56, 100, 255), border=(20, 22, 50, 255),
+        deco=lambda d: [dot(d, x, 22, 1, P.WHITE) for x in (44, 56, 68, 76)])
 
 
 # ----------------------------------------------------------------------------- items
@@ -924,6 +951,7 @@ def generate(out_dir):
     gen_icons(out_dir)
     gen_ui(out_dir)
     gen_backgrounds(out_dir)
+    gen_ground(out_dir)
     gen_items(out_dir)
     gen_gameprops(out_dir)
     gen_cutscene(out_dir)

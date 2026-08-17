@@ -63,6 +63,13 @@ def pet_bottom(base, sid, cx, bottom_y, width, tag=None, index=0):
     base.paste(im, (round(cx - width / 2), round(bottom_y - im.height)), im)
 
 
+def ground(base, cx, feet_y, width, rug="rug_rose"):
+    """A rug + soft contact shadow centered at the feet, so the pet is grounded."""
+    if rug:
+        stamp(base, frame(rug), cx, feet_y, width)
+    stamp(base, frame("fx_shadow"), cx, feet_y, int(width * 0.86))
+
+
 def _font(sz, bold=True):
     names = (["DejaVuSans-Bold.ttf", "DejaVuSans.ttf"] if bold else ["DejaVuSans.ttf"])
     roots = ["/usr/share/fonts/truetype/dejavu", "/usr/share/fonts/dejavu",
@@ -166,31 +173,33 @@ def screen_bg(bg_id):
 
 def s_egg():
     img = screen_bg("bg_egg")
-    sprite(img, "spr_egg", W / 2, 214, 150, tag="wiggle")
+    ground(img, W / 2, 300, 140, rug="rug_cream")
+    sprite(img, "spr_egg", W / 2, 232, 128, tag="wiggle")
     d = ImageDraw.Draw(img)
-    text(d, W / 2, 314, "Tama's egg...", 24)
-    cw, ch, cy0 = 156, 42, 350
-    d.rounded_rectangle([(W - cw) / 2, cy0, (W + cw) / 2, cy0 + ch], radius=21,
+    text(d, W / 2, 326, "Tama's egg...", 22)
+    cw, ch, cy0 = 156, 40, 356
+    d.rounded_rectangle([(W - cw) / 2, cy0, (W + cw) / 2, cy0 + ch], radius=20,
                         fill=(64, 116, 86, 255), outline=(255, 255, 255, 70), width=2)
-    text(d, W / 2, cy0 + 9, "Hatch now", 22)
-    return img, "Egg + Hatch-now button"
+    text(d, W / 2, cy0 + 8, "Hatch now", 22)
+    return img, "Egg (grounded, Cream rug)"
 
 
 def s_home_day():
     img = screen_bg("bg_room_day")
     label = care_ring(img, sel=0)
-    pet_bottom(img, "spr_baby", W / 2, 300, 108, tag="idle")
-    text(ImageDraw.Draw(img), W / 2, 306, label, 22)
+    ground(img, W / 2, 300, 150, rug="rug_rose")
+    pet_bottom(img, "spr_baby", W / 2, 302, 108, tag="idle")
     meters(img, hunger=3, happy=4)          # drawn last -> in front of the pet
-    return img, "Home - care ring"
+    return img, "Home - grounded + rug"
 
 
 def s_sleeping():
     img = screen_bg("bg_room_night")
+    ground(img, W / 2, 304, 150, rug="rug_sky")
     pet_bottom(img, "spr_baby", W / 2, 306, 112, tag="sleep")
-    sprite(img, "ov_zzz", W / 2 + 70, 208, 40)
+    sprite(img, "ov_zzz", W / 2 + 70, 214, 40)
     meters(img, hunger=2, happy=3)
-    return img, "Sleeping at night"
+    return img, "Sleeping (Sky rug)"
 
 
 def s_status():
