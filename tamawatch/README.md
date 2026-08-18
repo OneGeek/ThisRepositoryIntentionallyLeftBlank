@@ -57,14 +57,22 @@ tools/build.sh          # -> TamaWatch.apk + screenshots.png
 tools/build.sh --gen    # regenerate all assets first, then build
 ```
 
-`screenshots.png` is a contact sheet of five representative screens (egg, home /
-care ring, sleeping, status, shop) composited from the real generated assets
-using the same layout as the Compose UI — a fast way to eyeball a build without a
-device. Render it on its own anytime with:
+`screenshots.png` is a contact sheet of five representative screens (egg, home,
+sleeping, status, shop) rendered from the **real Compose UI** — the same
+composables that ship, with the real generated assets — via Robolectric +
+Roborazzi on the JVM. No emulator, no device: it can't drift from the app the way
+a hand-drawn mock can. Each frame is clipped to the round watch shape, so anything
+the bezel would cut off shows up in the preview too.
+
+Regenerate the renders and re-composite the sheet on their own anytime with:
 
 ```bash
-python3 assets-src/render_screens.py [out.png]
+./gradlew :app:recordRoborazziDebug   # -> app/build/screens/NN_name.png
+python3 assets-src/contact_sheet.py [out.png]
 ```
+
+Add a screen to the preview by adding a `@Test` to
+`app/src/test/java/com/tamawatch/ui/HomeSnapshotTest.kt`.
 
 ### Run the engine tests (pure JVM, no device)
 
@@ -97,7 +105,7 @@ tamawatch/
       audio/   SoundBank (SoundPool)
       sensor/  StepSource · Haptics
       background/ TickWorker · AttentionNotifier · BootReceiver
-      ui/      Compose-for-Wear screens, care ring, mini-games, cutscenes, onboarding
+      ui/      Compose-for-Wear screens, touch radial menu, mini-games, cutscenes, onboarding
       tile/ complication/  glanceable off-app surfaces
     src/test/  engine unit tests
   preview/     self-contained playable web build (index.html)

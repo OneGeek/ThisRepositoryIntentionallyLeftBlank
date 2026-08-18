@@ -51,8 +51,13 @@ cp app/build/outputs/apk/release/app-release.apk "$OUT/TamaWatch.apk"
 [ "$TEMP_KS" = 1 ] && rm -f keystore.properties
 
 # --- screenshots (always) ----------------------------------------------------
-echo "==> Rendering screenshots"
-python3 assets-src/render_screens.py "$OUT/screenshots.png"
+# Render the REAL Compose screens to PNGs on the JVM (Robolectric + Roborazzi —
+# no emulator), then composite them into one contact sheet. These are the actual
+# shipping composables with the real assets, so the preview can't drift from the
+# app the way a hand-drawn mock does.
+echo "==> Rendering screenshots (real Compose render)"
+./gradlew :app:recordRoborazziDebug --console=plain
+python3 assets-src/contact_sheet.py "$OUT/screenshots.png"
 
 echo
 echo "APK:         $OUT/TamaWatch.apk"
