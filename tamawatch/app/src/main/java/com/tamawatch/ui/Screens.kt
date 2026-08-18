@@ -1,5 +1,8 @@
 package com.tamawatch.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,9 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -29,8 +35,10 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamawatch.core.model.*
 import com.tamawatch.ui.common.*
+import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -125,26 +133,103 @@ private fun BoxScope.TopStatus(pet: Pet) {
     }
 }
 
-/** The centered pet on its rug; long-press to pet it. The menu lives in RadialMenu. */
+/**
+ * The centered pet on its rug. Tap it to pet it — the pet gives a clear bounce +
+ * a heart that pops up. Petting only lands a happiness gain once per cooldown; in
+ * between, the pet wears a small "content" heart and taps give a gentler nudge, so
+ * the throttle reads as a mood, never a timer.
+ */
 @Composable
 private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
     val (id, tag) = poseFor(pet)
+    val reduce = LocalReduceMotion.current
+    val lastPetMs by vm.lastPetMs.collectAsStateWithLifecycle()
+
+    // Wall-clock ticker: only runs while a cooldown is active so the "content"
+    // state clears itself. Never shown as a number — it just gates the mood cue.
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(lastPetMs) {
+        while (System.currentTimeMillis() - lastPetMs < Tuning.PET_COOLDOWN_MS) {
+            now = System.currentTimeMillis()
+            delay(250)
+        }
+        now = System.currentTimeMillis()
+    }
+    val content = pet.alive && !pet.asleep && now - lastPetMs < Tuning.PET_COOLDOWN_MS
+
+    // One-shot tap reaction: a squash-and-stretch bounce, bigger when it counts.
+    var reactKey by remember { mutableIntStateOf(0) }
+    var reactEffective by remember { mutableStateOf(true) }
+    val bounce = remember { Animatable(1f) }
+    LaunchedEffect(reactKey) {
+        if (reactKey == 0) return@LaunchedEffect
+        val peak = if (reactEffective) 1.18f else 1.07f
+        bounce.snapTo(1f)
+        bounce.animateTo(peak, tween(90))
+        bounce.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 600f))
+    }
+
     Box(
         Modifier
             .align(Alignment.Center)
-            .offset(y = 14.dp)
+            .offset(y = (-14).dp)
             .size(96.dp)
-            .pointerInput(pet.species) { detectTapGestures(onLongPress = { vm.petIt() }) },
+            .pointerInput(pet.species) {
+                detectTapGestures(onTap = {
+                    reactEffective = System.currentTimeMillis() - lastPetMs >= Tuning.PET_COOLDOWN_MS
+                    reactKey++
+                    vm.petIt()
+                })
+            },
         contentAlignment = Alignment.BottomCenter,
     ) {
         // Ground under the feet (behind the pet): rug + soft contact shadow.
         Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
-        // Feet pinned to the bottom; the frame's headroom overflows upward.
-        PetSprite(id, tag, 3, Modifier.align(Alignment.BottomCenter))
+        // Feet pinned to the bottom; the frame's headroom overflows upward. The
+        // bounce scales from the feet so the rug stays planted.
+        PetSprite(
+            id, tag, 3,
+            Modifier
+                .align(Alignment.BottomCenter)
+                .graphicsLayer {
+                    val s = if (reduce) 1f else bounce.value
+                    scaleX = s; scaleY = s
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                },
+        )
         if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
         if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
         if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
+        // Cooldown mood: a small steady heart, so it's clear the pet is content and
+        // more petting won't add happiness right now.
+        if (content) {
+            PixelSprite(
+                "ov_heart_particle", "rise", 2,
+                Modifier.align(Alignment.TopCenter).offset(y = 2.dp).size(18.dp).alpha(0.7f),
+            )
+        }
+        // The tap burst: a heart that springs up and fades on an effective pet.
+        PetTapBurst(reactKey, reactEffective && !reduce)
+    }
+}
+
+/** A heart that pops up from the pet's head and fades — the "I felt that" cue. */
+@Composable
+private fun BoxScope.PetTapBurst(key: Int, show: Boolean) {
+    if (key == 0 || !show) return
+    val rise = remember(key) { Animatable(0f) }
+    LaunchedEffect(key) { rise.snapTo(0f); rise.animateTo(1f, tween(620)) }
+    val p = rise.value
+    val frame = (p * 3f).toInt().coerceIn(0, 2)
+    Box(
+        Modifier
+            .align(Alignment.TopCenter)
+            .offset(y = (6 - 30 * p).dp)
+            .alpha((1f - p).coerceIn(0f, 1f))
+            .size((26 + 6 * p).dp),
+    ) {
+        PixelFrame("ov_heart_particle", frame, Modifier.fillMaxSize())
     }
 }
 
@@ -278,6 +363,7 @@ fun RugScreen(vm: TamaViewModel, current: Int) {
 private val HelpEntries = listOf(
     Triple("ic_hunger", "Hunger", "Meat shanks show how fed your pet is — refill it by feeding."),
     Triple("ic_mood", "Happy", "Smileys show your pet's mood — raise it by playing and petting."),
+    Triple("ov_heart_particle", "Pet", "Tap your pet to give it a fuss — it perks up and gains a little happiness. A small heart means it's content for a bit."),
     Triple("ic_feed", "Feed", "Open the food menu to feed a meal or snack."),
     Triple("ic_play", "Play", "Play a mini-game to raise happiness and earn Gotchi Points."),
     Triple("ic_bathroom", "Clean", "Flush away poop so your pet doesn't get sick."),

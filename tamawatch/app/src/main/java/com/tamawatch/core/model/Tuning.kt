@@ -50,4 +50,7 @@ object Tuning {
     const val OVERFEED_HUNGER = 95   // refuse meals above this
     const val PET_HAPPY = 4
     const val PET_BOND = 2
+    // Petting only lands a happiness/bond gain once per this window; taps in
+    // between still get a reaction, just no stat change (an anti-spam throttle).
+    const val PET_COOLDOWN_MS = 30_000L
 }

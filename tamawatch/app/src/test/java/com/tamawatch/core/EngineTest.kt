@@ -128,6 +128,17 @@ class EngineTest {
         assertFalse(CareEngine.heal(sick, 0).pet.stats.sick)
     }
 
+    @Test fun pettingRaisesHappyOnlyWhenEffective() {
+        val p = baby().copy(stats = Stats(hunger = 80, happy = 50, energy = 90))
+        val landed = CareEngine.pet(p, 0, effective = true)
+        assertEquals(50 + Tuning.PET_HAPPY, landed.pet.stats.happy)
+        assertTrue((landed.events.first() as DomainEvent.Petted).effective)
+
+        val throttled = CareEngine.pet(p, 0, effective = false)
+        assertEquals("cooldown pet must not change happy", 50, throttled.pet.stats.happy)
+        assertFalse((throttled.events.first() as DomainEvent.Petted).effective)
+    }
+
     private fun baby() = Pet(
         name = "Tama", species = Species.BABY, stage = Stage.BABY,
         generation = 1, bornAtMs = 0, stageStartMs = 0, lastUpdatedMs = 0,

@@ -131,7 +131,7 @@ sealed interface DomainEvent {
     data class Fed(val kind: FoodKind, val refused: Boolean) : DomainEvent
     data object Cleaned : DomainEvent
     data object Healed : DomainEvent
-    data object Petted : DomainEvent
+    data class Petted(val effective: Boolean) : DomainEvent
     data class Scolded(val correct: Boolean) : DomainEvent
     data class EarnedGp(val amount: Int) : DomainEvent
     data object StepGoal : DomainEvent

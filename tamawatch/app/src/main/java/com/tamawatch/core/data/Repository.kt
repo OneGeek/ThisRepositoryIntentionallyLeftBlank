@@ -37,6 +37,12 @@ class Repository(
     private val _events = MutableSharedFlow<DomainEvent>(extraBufferCapacity = 32)
     val events: SharedFlow<DomainEvent> = _events.asSharedFlow()
 
+    // Wall-clock of the last *effective* pet, so the UI can show the cooldown
+    // (pet looks content) without ever displaying a countdown. Not persisted —
+    // a soft anti-spam throttle that simply resets when the app restarts.
+    private val _lastPetMs = MutableStateFlow(0L)
+    val lastPetMs: StateFlow<Long> = _lastPetMs.asStateFlow()
+
     private var sleep: SleepWindow = SleepWindow()
     fun setSleepWindow(w: SleepWindow) { sleep = w }
 
@@ -91,7 +97,11 @@ class Repository(
         apply { p, now -> CareEngine.heal(p, now) }
         consume("item_medicine")
     }
-    suspend fun petIt() = apply { p, now -> CareEngine.pet(p, now) }
+    suspend fun petIt() = apply { p, now ->
+        val effective = now - _lastPetMs.value >= Tuning.PET_COOLDOWN_MS
+        if (effective) _lastPetMs.value = now
+        CareEngine.pet(p, now, effective)
+    }
     suspend fun scold() = apply { p, now -> CareEngine.scold(p, now) }
     suspend fun toggleLight() = apply { p, now -> CareEngine.toggleLight(p, now) }
 

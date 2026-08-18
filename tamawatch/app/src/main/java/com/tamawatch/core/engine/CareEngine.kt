@@ -171,15 +171,18 @@ object CareEngine {
         return Sim(p, listOf(DomainEvent.Healed, DomainEvent.Recovered))
     }
 
-    fun pet(pet: Pet, nowMs: Long): Sim {
+    /**
+     * Pet the creature. Only an [effective] pet (off cooldown) raises happy/bond;
+     * an on-cooldown pet still returns a [DomainEvent.Petted] so the UI can react,
+     * but leaves the stats untouched so tapping can't spam happiness to full.
+     */
+    fun pet(pet: Pet, nowMs: Long, effective: Boolean = true): Sim {
         val s = pet.stats
-        return Sim(
-            pet.copy(
-                stats = s.copy(happy = (s.happy + Tuning.PET_HAPPY).clamp(), bond = (s.bond + Tuning.PET_BOND).clamp()),
-                lastUpdatedMs = nowMs,
-            ),
-            listOf(DomainEvent.Petted),
-        )
+        val stats = if (effective)
+            s.copy(happy = (s.happy + Tuning.PET_HAPPY).clamp(), bond = (s.bond + Tuning.PET_BOND).clamp())
+        else
+            s
+        return Sim(pet.copy(stats = stats, lastUpdatedMs = nowMs), listOf(DomainEvent.Petted(effective)))
     }
 
     /** Discipline is "correct" only when the pet has no real unmet need. */
@@ -212,7 +215,7 @@ object CareEngine {
                 care = pet.care.copy(gamesPlayed = pet.care.gamesPlayed + 1),
                 lastUpdatedMs = nowMs,
             ),
-            listOf(DomainEvent.Petted), // small positive; happy chirp
+            listOf(DomainEvent.Petted(effective = true)), // small positive; happy chirp
         )
     }
 }

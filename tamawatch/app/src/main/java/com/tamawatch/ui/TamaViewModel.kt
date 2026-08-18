@@ -32,6 +32,7 @@ class TamaViewModel(
 
     val pet = repository.pet
     val inventory = repository.inventory
+    val lastPetMs = repository.lastPetMs
     val settings: StateFlow<Settings> = settingsStore.flow
         .stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
 
