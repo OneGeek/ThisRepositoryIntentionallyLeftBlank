@@ -1,5 +1,6 @@
 package com.tamawatch.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,6 +22,11 @@ fun WearApp(vm: TamaViewModel) {
             vm.startNextGeneration(name); vm.dismissCutscene()
         })
         else -> {
+            // Swipe-to-dismiss is disabled at the theme level, so the watch's
+            // physical back button becomes the way back: on any sub-screen it
+            // returns Home; on Home it stays disabled so the button exits the app.
+            BackHandler(enabled = vm.screen != Screen.Home) { vm.home() }
+
             val ownsBeach = (inventory["cos_beach"] ?: 0) > 0
             val ownsSpace = (inventory["cos_space"] ?: 0) > 0
             when (vm.screen) {

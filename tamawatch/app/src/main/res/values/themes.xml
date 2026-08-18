@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Base app theme: the platform Wear look (Theme.DeviceDefault), but with the
+      system swipe-to-dismiss gesture (swipe right to go back / close the app)
+      turned OFF. TamaWatch is touch-driven — tap the pet, tap-hold-drag the
+      radial menu — and the edge swipe kept firing by accident mid-gesture. With
+      it disabled, in-app navigation is the Back buttons on each screen and the
+      watch's physical back button (see the BackHandler in WearApp).
+    -->
+    <style name="Theme.TamaWatch" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowSwipeToDismiss">false</item>
+    </style>
+
+</resources>
