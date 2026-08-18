@@ -247,8 +247,8 @@ def s_egg():
 def s_home_day():
     img = screen_bg("bg_room_day")
     care_ring(img, pressed=2)                     # peeking the "Care" hub
-    ground(img, W / 2, 286, 150, rug="rug_rose")  # pet sits higher on the screen
-    pet_bottom(img, "spr_baby", W / 2, 288, 108, tag="idle")
+    ground(img, W / 2, 300, 150, rug="rug_rose")  # rug stays grounded near bottom
+    pet_bottom(img, "spr_baby", W / 2, 288, 108, tag="idle")  # pet sits higher, independent
     sprite(img, "ov_heart_particle", W / 2 + 60, 214, 30, tag="rise")  # tap-to-pet cue
     capsule(img, W / 2, W * 0.43, "Care", progress=0.62)  # name + ring at center
     meters(img, hunger=3, happy=4)                # drawn last -> in front

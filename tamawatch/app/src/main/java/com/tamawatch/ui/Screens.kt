@@ -169,6 +169,18 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
         bounce.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 600f))
     }
 
+    // The rug/ground is its own element, pinned at the grounded spot near the
+    // bottom. It is deliberately independent of the pet: raising the pet must
+    // not lift the floor, so this stays put while the pet box sits higher.
+    Box(
+        Modifier.align(Alignment.Center).offset(y = 14.dp).size(96.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
+        // Poop belongs on the floor, so it lives with the rug, not the raised pet.
+        if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
+    }
+
     Box(
         Modifier
             .align(Alignment.Center)
@@ -183,10 +195,8 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
             },
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // Ground under the feet (behind the pet): rug + soft contact shadow.
-        Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
-        // Feet pinned to the bottom; the frame's headroom overflows upward. The
-        // bounce scales from the feet so the rug stays planted.
+        // Feet pinned to the bottom of this (raised) box; headroom overflows up.
+        // The bounce scales from the feet.
         PetSprite(
             id, tag, 3,
             Modifier
@@ -197,7 +207,6 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
                     transformOrigin = TransformOrigin(0.5f, 1f)
                 },
         )
-        if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
         if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
         if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
