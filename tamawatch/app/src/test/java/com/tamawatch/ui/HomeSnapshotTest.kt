@@ -11,8 +11,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -31,9 +32,13 @@ import org.robolectric.annotation.GraphicsMode
  * clipped to the round watch shape on a black backdrop, so the two can be compared
  * pixel-for-pixel. Record: `./gradlew :app:recordRoborazziDebug`.
  */
+// Galaxy Watch Ultra: 480x480 px at density 2.0 (xhdpi) => 240x240 dp. Matching the
+// device's dp AND density here makes the synthetic render 480x480 px, 1:1 with the
+// on-device capture (Settings → capture), so dp-sized elements (hubs, text) are the
+// right size relative to the screen, not just positioned right.
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w480dp-h480dp-round-xhdpi")
+@Config(qualifiers = "w240dp-h300dp-xhdpi")   // tall enough to hold the 480px shot node
 class HomeSnapshotTest {
 
     @get:Rule
@@ -48,15 +53,16 @@ class HomeSnapshotTest {
         var index by mutableIntStateOf(0)
         compose.setContent {
             ProvidePixel(c.spriteBank, reduceMotion = true) {
-                Box(Modifier.size(480.dp).background(Color.Black)) {
-                    Box(Modifier.size(480.dp).clip(CircleShape)) { PreviewShots[index].content(vm) }
+                // 240dp @ xhdpi => 480px, matching the Galaxy Watch Ultra 1:1.
+                Box(Modifier.size(240.dp).background(Color.Black).testTag("shot")) {
+                    Box(Modifier.size(240.dp).clip(CircleShape)) { PreviewShots[index].content(vm) }
                 }
             }
         }
         PreviewShots.indices.forEach { i ->
             compose.runOnUiThread { index = i }
             compose.waitForIdle()
-            compose.onRoot().captureRoboImage("build/screens/${PreviewShots[i].id}.png")
+            compose.onNodeWithTag("shot").captureRoboImage("build/screens/${PreviewShots[i].id}.png")
         }
     }
 }

@@ -9,10 +9,14 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,7 +35,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.tamawatch.tama
@@ -55,12 +61,35 @@ import kotlinx.coroutines.withContext
 @Composable
 fun RenderCaptureScreen(vm: TamaViewModel) {
     val context = LocalContext.current
+    val deviceInfo = remember {
+        val dm = context.resources.displayMetrics
+        val cfg = context.resources.configuration
+        "${dm.widthPixels}x${dm.heightPixels}px · ${dm.densityDpi}dpi · " +
+            "x${dm.density} · ${cfg.screenWidthDp}x${cfg.screenHeightDp}dp"
+    }
     val bank = remember { context.tama.spriteBank }
     val shots = PreviewShots
     val layer = rememberGraphicsLayer()
     var index by remember { mutableIntStateOf(0) }
     val frames = remember { mutableStateListOf<Bitmap>() }
     var msg by remember { mutableStateOf("Rendering states…") }
+    var result by remember { mutableStateOf<String?>(null) }
+
+    if (result != null) {
+        // Persistent result screen — stays up (tap Done) so the outcome, the device
+        // metrics, and the exact save paths are readable instead of flashing by.
+        Box(Modifier.fillMaxSize().background(Color(0xFF0C0E16)).padding(14.dp), contentAlignment = Alignment.Center) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(result!!, style = MaterialTheme.typography.caption2, color = Color.White, textAlign = TextAlign.Center)
+                Button(onClick = { vm.endCapture() }) { Text("Done") }
+            }
+        }
+        return
+    }
 
     if (index < shots.size) {
         ProvidePixel(bank, reduceMotion = true) {
@@ -95,54 +124,100 @@ fun RenderCaptureScreen(vm: TamaViewModel) {
             msg = "Captured ${index + 1}/${shots.size}"
             index++
         } else {
-            msg = "Saving to gallery…"
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    val sheet = buildContactSheet(shots.map { it.label }, frames)
-                    val sheetUri = saveBitmapToGallery(context, "tamawatch_states.png", sheet)
-                        ?: error("MediaStore insert returned null")
-                    frames.forEachIndexed { i, b ->
-                        saveBitmapToGallery(context, "tamawatch_${shots[i].id}.png", b)
-                    }
-                    sheetUri
-                }
-            }
-            msg = if (result.isSuccess) {
-                "Saved ${frames.size} states + sheet to Gallery"
-            } else {
-                "Capture failed: ${result.exceptionOrNull()?.message}"
-            }
-            delay(2800)
-            vm.endCapture()
+            msg = "Saving…"
+            result = withContext(Dispatchers.IO) { saveEverything(context, deviceInfo, shots, frames) }
         }
     }
 }
 
-/** Lay the captured frames out as a 2-column labeled sheet at native resolution. */
-private fun buildContactSheet(labels: List<String>, bmps: List<Bitmap>): Bitmap {
+/**
+ * Save the captured frames every way we can and return a human-readable summary.
+ * The app-private external dir always works and is adb-pullable; the MediaStore
+ * (public Pictures) write is best-effort — on some watches the Gallery app won't
+ * index it, but the file still lands on disk where adb can pull it.
+ */
+private fun saveEverything(
+    context: Context,
+    header: String,
+    shots: List<PreviewShot>,
+    frames: List<Bitmap>,
+): String {
+    val sheet = buildContactSheet(header, shots.map { it.label }, frames)
+    val named = buildList {
+        add("tamawatch_states.png" to sheet)
+        frames.forEachIndexed { i, b -> add("tamawatch_${shots[i].id}.png" to b) }
+    }
+
+    // 1) App-private external dir — reliable, no permission, adb-pullable.
+    val dir = java.io.File(
+        context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir,
+        "TamaWatch",
+    ).apply { mkdirs() }
+    var fileCount = 0
+    named.forEach { (name, bmp) ->
+        runCatching {
+            java.io.File(dir, name).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }.onSuccess { fileCount++ }
+    }
+
+    // 2) MediaStore (public Pictures/TamaWatch) — best effort for the gallery.
+    val gallery = runCatching {
+        named.forEach { (name, bmp) ->
+            saveBitmapToGallery(context, name, bmp) ?: error("insert returned null")
+        }
+    }
+    val galleryLine = if (gallery.isSuccess) {
+        "Gallery: wrote ${named.size} to Pictures/TamaWatch"
+    } else {
+        "Gallery: failed (${gallery.exceptionOrNull()?.message})"
+    }
+
+    return buildString {
+        appendLine("Captured ${frames.size} states")
+        appendLine(header)
+        appendLine("Files: $fileCount PNGs →")
+        appendLine(dir.absolutePath)
+        appendLine(galleryLine)
+        appendLine("Also try: /sdcard/Pictures/TamaWatch")
+    }
+}
+
+/**
+ * Lay the captured frames out as a 2-column labeled sheet at native resolution,
+ * with a header line carrying the device's real DisplayMetrics — the numbers needed
+ * to configure the JVM synthetic render to match this watch pixel-for-pixel.
+ */
+private fun buildContactSheet(header: String, labels: List<String>, bmps: List<Bitmap>): Bitmap {
     val cell = bmps.firstOrNull()?.width ?: 480
     val cols = 2
     val labelH = 48
     val pad = 24
     val gap = 20
+    val headerH = 72
     val rows = (bmps.size + cols - 1) / cols
     val w = pad * 2 + cols * cell + (cols - 1) * gap
-    val h = pad * 2 + rows * (cell + labelH) + (rows - 1) * gap
+    val h = pad * 2 + headerH + rows * (cell + labelH) + (rows - 1) * gap
     val sheet = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(sheet)
     canvas.drawColor(0xFF0C0E16.toInt())
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFF0F0F5.toInt()
         textSize = 30f
         textAlign = Paint.Align.CENTER
     }
+    val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFF2C14E.toInt()
+        textSize = 28f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(header, (w / 2).toFloat(), (pad + 34).toFloat(), headerPaint)
     bmps.forEachIndexed { i, b ->
         val col = i % cols
         val row = i / cols
         val x = pad + col * (cell + gap)
-        val y = pad + row * (cell + labelH + gap)
+        val y = pad + headerH + row * (cell + labelH + gap)
         canvas.drawBitmap(b, x.toFloat(), y.toFloat(), null)
-        canvas.drawText(labels.getOrElse(i) { "" }, (x + cell / 2).toFloat(), (y + cell + 34).toFloat(), paint)
+        canvas.drawText(labels.getOrElse(i) { "" }, (x + cell / 2).toFloat(), (y + cell + 34).toFloat(), labelPaint)
     }
     return sheet
 }
