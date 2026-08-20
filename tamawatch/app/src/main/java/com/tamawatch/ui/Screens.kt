@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -242,6 +243,22 @@ private fun BoxScope.PetTapBurst(key: Int, show: Boolean) {
     }
 }
 
+/**
+ * A dark radial backdrop for the list/info screens that have no room art of their
+ * own (they'd otherwise render black-on-black). Lighter in the middle, darker at
+ * the bezel — reads as intentional on the round face and keeps text legible.
+ */
+@Composable
+fun ScreenBackdrop(modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(listOf(Color(0xFF1C2136), Color(0xFF0A0C13))),
+            ),
+    )
+}
+
 // ---------------------------------------------------------------- Feed
 @Composable
 fun FeedScreen(vm: TamaViewModel, inventory: Map<String, Int>) {
@@ -264,6 +281,8 @@ fun FeedScreen(vm: TamaViewModel, inventory: Map<String, Int>) {
 // ---------------------------------------------------------------- Status
 @Composable
 fun StatusScreen(vm: TamaViewModel, pet: Pet) {
+    Box(Modifier.fillMaxSize()) {
+        ScreenBackdrop()
     ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         item { Text(pet.name, style = MaterialTheme.typography.title3) }
         item { Text("${pet.species.display} · Gen ${pet.generation}", style = MaterialTheme.typography.caption1) }
@@ -275,6 +294,7 @@ fun StatusScreen(vm: TamaViewModel, pet: Pet) {
         item { StatBar("Disc. ", pet.stats.discipline, tint = Color(0xFFFADC5A)) }
         item { Text("Care misses: ${pet.care.misses}", style = MaterialTheme.typography.caption3) }
         item { BackButton(vm) }
+    }
     }
 }
 
@@ -387,6 +407,8 @@ private val HelpEntries = listOf(
 
 @Composable
 fun HelpScreen(vm: TamaViewModel) {
+    Box(Modifier.fillMaxSize()) {
+        ScreenBackdrop()
     ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         item { Text("Help", style = MaterialTheme.typography.title3) }
         item { Text("What the icons mean", style = MaterialTheme.typography.caption2) }
@@ -406,6 +428,7 @@ fun HelpScreen(vm: TamaViewModel) {
             }
         }
         item { BackButton(vm) }
+    }
     }
 }
 
