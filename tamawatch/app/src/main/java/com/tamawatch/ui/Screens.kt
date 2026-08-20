@@ -357,6 +357,11 @@ fun SettingsScreen(vm: TamaViewModel, s: com.tamawatch.core.data.Settings) {
         item { Text("Sleep ${s.sleep.startHour}:00–${s.sleep.endHour}:00", style = MaterialTheme.typography.caption2) }
         item { Button(onClick = { vm.go(Screen.Rugs) }, modifier = Modifier.fillMaxWidth()) { Text("Rug: ${rugName(s.rugId)}") } }
         item { Button(onClick = { vm.go(Screen.Help) }, modifier = Modifier.fillMaxWidth()) { Text("Help: what the icons mean") } }
+        item {
+            Button(onClick = { vm.startCapture() }, modifier = Modifier.fillMaxWidth()) {
+                Text("Capture render states → Gallery", style = MaterialTheme.typography.caption2)
+            }
+        }
         item { BackButton(vm) }
     }
 }

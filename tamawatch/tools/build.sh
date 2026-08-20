@@ -56,7 +56,10 @@ cp app/build/outputs/apk/release/app-release.apk "$OUT/TamaWatch.apk"
 # shipping composables with the real assets, so the preview can't drift from the
 # app the way a hand-drawn mock does.
 echo "==> Rendering screenshots (real Compose render)"
-./gradlew :app:recordRoborazziDebug --console=plain
+rm -f app/build/screens/*.png          # drop stale frames from renamed/removed states
+# --rerun-tasks so the render always regenerates (Gradle can't see that the rm
+# above invalidated the Roborazzi outputs, and would otherwise skip as up-to-date).
+./gradlew :app:recordRoborazziDebug --console=plain --rerun-tasks
 python3 assets-src/contact_sheet.py "$OUT/screenshots.png"
 
 echo

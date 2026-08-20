@@ -41,6 +41,12 @@ class TamaViewModel(
     var cutscene by mutableStateOf<Cutscene?>(null)
         private set
 
+    // Dev tool: when true, WearApp shows the render-state capture flow instead.
+    var capturing by mutableStateOf(false)
+        private set
+    fun startCapture() { capturing = true }
+    fun endCapture() { capturing = false }
+
     init {
         viewModelScope.launch { repository.load() }
         viewModelScope.launch {

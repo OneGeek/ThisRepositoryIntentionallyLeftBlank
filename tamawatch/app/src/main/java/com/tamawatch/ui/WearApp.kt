@@ -14,6 +14,11 @@ fun WearApp(vm: TamaViewModel) {
     val cutscene = vm.cutscene
     val current = pet
 
+    if (vm.capturing) {
+        RenderCaptureScreen(vm)
+        return
+    }
+
     when {
         !settings.onboarded || current == null -> Onboarding(onStart = vm::startFreshPet)
         cutscene is Cutscene.Hatch -> HatchOverlay(onDone = vm::dismissCutscene)
