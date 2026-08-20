@@ -36,6 +36,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamawatch.core.model.*
 import com.tamawatch.ui.common.*
@@ -259,6 +260,29 @@ fun ScreenBackdrop(modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * A ScalingLazyColumn with a DETERMINISTIC initial layout: pinned scroll state and
+ * fixed content padding instead of auto-centering (whose padding depends on the
+ * viewport, so it settles a few px differently between Robolectric and the device).
+ * Pinning it lets the synthetic render and the on-device capture line up 1:1, so the
+ * visual-diff check is clean on list screens too. Use this for any list screen that
+ * appears in PreviewShots.
+ */
+@Composable
+fun PinnedScalingColumn(
+    modifier: Modifier = Modifier,
+    content: androidx.wear.compose.foundation.lazy.ScalingLazyListScope.() -> Unit,
+) {
+    ScalingLazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = rememberScalingLazyListState(initialCenterItemIndex = 0, initialCenterItemScrollOffset = 0),
+        autoCentering = null,
+        contentPadding = PaddingValues(top = 40.dp, bottom = 44.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        content = content,
+    )
+}
+
 // ---------------------------------------------------------------- Feed
 @Composable
 fun FeedScreen(vm: TamaViewModel, inventory: Map<String, Int>) {
@@ -283,7 +307,7 @@ fun FeedScreen(vm: TamaViewModel, inventory: Map<String, Int>) {
 fun StatusScreen(vm: TamaViewModel, pet: Pet) {
     Box(Modifier.fillMaxSize()) {
         ScreenBackdrop()
-    ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+    PinnedScalingColumn {
         item { Text(pet.name, style = MaterialTheme.typography.title3) }
         item { Text("${pet.species.display} · Gen ${pet.generation}", style = MaterialTheme.typography.caption1) }
         item { Text("${pet.stage} · ${pet.ageDays}d · ${pet.stats.weightG}g", style = MaterialTheme.typography.caption2) }
@@ -304,7 +328,7 @@ fun ShopScreen(vm: TamaViewModel, pet: Pet) {
     var toast by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize()) {
         PixelFrame("bg_shop", 0, Modifier.fillMaxSize())
-        ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        PinnedScalingColumn {
             item { Text("Shop · ${pet.gp} GP", style = MaterialTheme.typography.title3) }
             items(Catalog.allFood) { f ->
                 ShopRow(f.iconId, "${f.display}", f.price) { vm.buyFood(f.id) { ok -> toast = if (ok) "Bought ${f.display}" else "Need more GP" } }
@@ -414,7 +438,7 @@ private val HelpEntries = listOf(
 fun HelpScreen(vm: TamaViewModel) {
     Box(Modifier.fillMaxSize()) {
         ScreenBackdrop()
-    ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+    PinnedScalingColumn {
         item { Text("Help", style = MaterialTheme.typography.title3) }
         item { Text("What the icons mean", style = MaterialTheme.typography.caption2) }
         HelpEntries.forEach { (icon, name, desc) ->

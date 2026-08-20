@@ -76,26 +76,43 @@ Add a screen to the preview by adding an entry to the shared `PreviewShots` in
 and the on-device capture pick it up. The synthetic is rendered at the Galaxy Watch
 Ultra's real config (226dp @ 340dpi ⇒ 480×480 px), so it lines up 1:1 with the watch.
 
-### Compare the synthetic render against the real watch
+### Compare the synthetic render against the real watch (pixel diff)
 
-Settings → **Capture render states → Gallery** renders the same `PreviewShots` on the
-watch and writes them (a composite plus each frame, with the device's DisplayMetrics in
-the header) to `Pictures/TamaWatch` and the app's external files dir. Pull them off:
+The JVM synthetic renders and the on-device capture drive the **same** `PreviewShots`
+through the **same** composables, at the watch's real config (226dp @ 340dpi ⇒ 480×480),
+so they can be diffed pixel-for-pixel. The full procedure:
 
-```bash
-adb pull /sdcard/Pictures/TamaWatch      # e.g. tamawatch_02_home.png
-```
+1. **Build & install one APK.** Both sides must come from the *same* build so the states
+   and layout match. `tools/build.sh` produces `TamaWatch.apk` *and* the synthetic
+   renders (`app/build/screens/NN_name.png`) in one shot. Install the APK on the watch.
+2. **Capture on the watch.** Settings → **Capture render states → Gallery**. It renders
+   each state through the real pipeline and writes a composite plus each frame — with the
+   device's `DisplayMetrics` in the header — to `Pictures/TamaWatch` and the app's external
+   files dir. The result screen prints the paths and counts; re-running first clears the
+   prior `tamawatch*` files.
+3. **Pull the device frames** over (wireless) adb:
+   ```bash
+   adb pull /sdcard/Pictures/TamaWatch  ./device-shots
+   ```
+4. **Diff** with the anti-aliasing-tolerant differ. It ignores sub-pixel/AA noise (a color
+   threshold plus a small neighborhood radius) and flags only real differences, writing a
+   `synthetic | device | diff` triptych per shot and a `%`-diff table:
+   ```bash
+   python3 assets-src/visual_diff.py app/build/screens ./device-shots --out build/diff
+   python3 assets-src/visual_diff.py a.png b.png --out diff.png     # or a single pair
+   ```
+   Knobs: `--color N` per-channel threshold (default 32), `--radius R` AA/shift radius px
+   (default 1), `--fail-pct P` non-zero exit if any pair exceeds P% (default 1, CI-friendly).
+   With the shipping build the whole set should read well under 1% at the defaults — the
+   deterministic screens are typically ~0%.
 
-Then diff them against the synthetic renders with an **anti-aliasing-tolerant** differ —
-it ignores sub-pixel/AA noise (via a color threshold and a small neighborhood radius) and
-flags only real differences, emitting a `synthetic | device | diff` triptych per shot:
-
-```bash
-python3 assets-src/visual_diff.py app/build/screens <pulled-dir> --out build/diff
-python3 assets-src/visual_diff.py a.png b.png --out diff.png     # single pair
-#   --color N   per-channel threshold (default 32)   --radius R  AA/shift radius px (default 1)
-#   exits non-zero if any pair exceeds --fail-pct (default 1%), so it drops into CI
-```
+Notes:
+- **List screens use `PinnedScalingColumn`** (fixed scroll + fixed padding instead of
+  auto-centering), because auto-centering settles a few px differently between Robolectric
+  and the device and would otherwise show up as a whole-list vertical shift in the diff.
+  Any new list screen added to `PreviewShots` should use it too.
+- If a real device's anti-aliasing is heavier than Robolectric's, nudge `--color` to ~40
+  or `--radius` to 2 rather than chasing edge halos.
 
 ### Run the engine tests (pure JVM, no device)
 
