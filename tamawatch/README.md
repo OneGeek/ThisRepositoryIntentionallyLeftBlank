@@ -71,8 +71,31 @@ Regenerate the renders and re-composite the sheet on their own anytime with:
 python3 assets-src/contact_sheet.py [out.png]
 ```
 
-Add a screen to the preview by adding a `@Test` to
-`app/src/test/java/com/tamawatch/ui/HomeSnapshotTest.kt`.
+Add a screen to the preview by adding an entry to the shared `PreviewShots` in
+`app/src/main/java/com/tamawatch/ui/PreviewScenarios.kt` — both the synthetic render
+and the on-device capture pick it up. The synthetic is rendered at the Galaxy Watch
+Ultra's real config (226dp @ 340dpi ⇒ 480×480 px), so it lines up 1:1 with the watch.
+
+### Compare the synthetic render against the real watch
+
+Settings → **Capture render states → Gallery** renders the same `PreviewShots` on the
+watch and writes them (a composite plus each frame, with the device's DisplayMetrics in
+the header) to `Pictures/TamaWatch` and the app's external files dir. Pull them off:
+
+```bash
+adb pull /sdcard/Pictures/TamaWatch      # e.g. tamawatch_02_home.png
+```
+
+Then diff them against the synthetic renders with an **anti-aliasing-tolerant** differ —
+it ignores sub-pixel/AA noise (via a color threshold and a small neighborhood radius) and
+flags only real differences, emitting a `synthetic | device | diff` triptych per shot:
+
+```bash
+python3 assets-src/visual_diff.py app/build/screens <pulled-dir> --out build/diff
+python3 assets-src/visual_diff.py a.png b.png --out diff.png     # single pair
+#   --color N   per-channel threshold (default 32)   --radius R  AA/shift radius px (default 1)
+#   exits non-zero if any pair exceeds --fail-pct (default 1%), so it drops into CI
+```
 
 ### Run the engine tests (pure JVM, no device)
 
