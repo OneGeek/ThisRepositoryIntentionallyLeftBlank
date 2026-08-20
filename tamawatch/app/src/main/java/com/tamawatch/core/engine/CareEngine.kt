@@ -161,14 +161,20 @@ object CareEngine {
         return Sim(p, listOf(DomainEvent.Cleaned))
     }
 
-    fun heal(pet: Pet, nowMs: Long): Sim {
+    /**
+     * Cure sickness. A [gentle] cure (shop Medicine) nudges bond up; the free home
+     * remedy still cures but the pet dislikes it, taking a bond hit. Either way the
+     * pet stops being sick — you're never hard-blocked from saving it.
+     */
+    fun heal(pet: Pet, nowMs: Long, gentle: Boolean = true): Sim {
         if (!pet.stats.sick) return Sim(pet.copy(lastUpdatedMs = nowMs))
+        val bondDelta = if (gentle) Tuning.MEDICINE_BOND_BONUS else -Tuning.HOME_REMEDY_BOND_PENALTY
         var p = pet.copy(
-            stats = pet.stats.copy(sick = false, bond = (pet.stats.bond + 1).clamp()),
+            stats = pet.stats.copy(sick = false, bond = (pet.stats.bond + bondDelta).clamp()),
             lastUpdatedMs = nowMs,
         )
         p = clearCallIfResolved(p)
-        return Sim(p, listOf(DomainEvent.Healed, DomainEvent.Recovered))
+        return Sim(p, listOf(DomainEvent.Healed(gentle), DomainEvent.Recovered))
     }
 
     /**

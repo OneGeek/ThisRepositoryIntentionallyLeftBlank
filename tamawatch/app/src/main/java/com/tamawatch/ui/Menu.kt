@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
@@ -70,7 +71,13 @@ private const val ROW_HOLD_MS = 720f
 
 private val Gold = Color(0xFFF2C14E)
 
-private class MenuItem(val name: String, val icon: String, val confirm: Boolean = false, val run: () -> Unit)
+private class MenuItem(
+    val name: String,
+    val icon: String,
+    val confirm: Boolean = false,
+    val subtitle: String? = null,
+    val run: () -> Unit,
+)
 private class Hub(
     val name: String,
     val icon: String,
@@ -79,13 +86,22 @@ private class Hub(
     val items: List<MenuItem> = emptyList(),
 )
 
-private fun hubsFor(vm: TamaViewModel, pet: Pet): List<Hub> = listOf(
+private fun hubsFor(vm: TamaViewModel, pet: Pet, medicineCount: Int): List<Hub> {
+    // Teach the two-tier cure right where you'd use it: with a shop Medicine in the
+    // bag it's a gentle cure (no bond loss); without one, the free home remedy still
+    // cures but the pet takes a small bond hit.
+    val medSubtitle = when {
+        !pet.stats.sick -> "Not sick"
+        medicineCount > 0 -> "Gentle cure · ×$medicineCount"
+        else -> "Free home remedy · small bond hit"
+    }
+    return listOf(
     Hub("Settings", "ic_settings", 216.0, direct = { vm.go(Screen.Settings) }),
     Hub("Shop", "ic_shop", 154.0, direct = { vm.go(Screen.Shop) }),
     Hub("Care", "ic_feed", 90.0, items = listOf(
         MenuItem("Feed", "ic_feed") { vm.go(Screen.Feed) },
         MenuItem("Clean", "ic_bathroom") { vm.clean() },
-        MenuItem("Medicine", "ic_medicine", confirm = true) { vm.heal() },
+        MenuItem("Medicine", "ic_medicine", confirm = true, subtitle = medSubtitle) { vm.heal() },
         MenuItem(if (pet.lightOn) "Lights off" else "Lights on", "ic_light") { vm.toggleLight() },
         MenuItem("Scold", "ic_discipline") { vm.scold() },
     )),
@@ -98,7 +114,8 @@ private fun hubsFor(vm: TamaViewModel, pet: Pet): List<Hub> = listOf(
         MenuItem("Status", "ic_status") { vm.go(Screen.Status) },
         MenuItem("Steps", "ic_steps") { vm.go(Screen.Steps) },
     )),
-)
+    )
+}
 
 /**
  * Touch-first radial menu: five category hubs on a horseshoe. Press-and-hold a
@@ -109,7 +126,9 @@ private fun hubsFor(vm: TamaViewModel, pet: Pet): List<Hub> = listOf(
 @Composable
 fun RadialMenu(vm: TamaViewModel, pet: Pet) {
     val haptics = LocalContext.current.tama.haptics
-    val hubs = remember(pet.lightOn) { hubsFor(vm, pet) }
+    val inventory by vm.inventory.collectAsStateWithLifecycle()
+    val medicineCount = inventory["item_medicine"] ?: 0
+    val hubs = remember(pet.lightOn, pet.stats.sick, medicineCount) { hubsFor(vm, pet, medicineCount) }
     var openHub by remember { mutableStateOf<Hub?>(null) }
 
     var pressed by remember { mutableIntStateOf(-1) }
@@ -324,7 +343,12 @@ private fun MenuRow(item: MenuItem, onDone: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PixelFrame(item.icon, 0, Modifier.size(26.dp))
-            Text(item.name, style = MaterialTheme.typography.button, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(item.name, style = MaterialTheme.typography.button)
+                item.subtitle?.let {
+                    Text(it, style = MaterialTheme.typography.caption3, color = Color(0xFFAAB1C6))
+                }
+            }
             Text(
                 if (item.confirm) "hold" else "tap",
                 style = MaterialTheme.typography.caption3,

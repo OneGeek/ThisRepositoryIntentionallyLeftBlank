@@ -92,10 +92,17 @@ class Repository(
     }
 
     suspend fun clean() = apply { p, now -> CareEngine.clean(p, now) }
+    /**
+     * Cure sickness. If a shop Medicine is in the bag it's a gentle cure (consumed,
+     * no bond loss); otherwise the free home remedy is used (works, but costs bond).
+     * Never a no-op while sick, so the pet can always be saved.
+     */
     suspend fun heal() {
-        if ((_inventory.value["item_medicine"] ?: 0) <= 0) return
-        apply { p, now -> CareEngine.heal(p, now) }
-        consume("item_medicine")
+        val cur = _pet.value ?: return
+        if (!cur.stats.sick) return
+        val gentle = (_inventory.value["item_medicine"] ?: 0) > 0
+        apply { p, now -> CareEngine.heal(p, now, gentle) }
+        if (gentle) consume("item_medicine")
     }
     suspend fun petIt() = apply { p, now ->
         val effective = now - _lastPetMs.value >= Tuning.PET_COOLDOWN_MS

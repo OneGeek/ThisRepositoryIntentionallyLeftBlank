@@ -35,7 +35,8 @@ class Haptics(context: Context) {
         is DomainEvent.Evolved, is DomainEvent.Hatched -> evolve()
         is DomainEvent.Scolded -> if (e.correct) confirm() else error()
         is DomainEvent.Fed -> if (e.refused) error() else confirm()
-        is DomainEvent.Cleaned, is DomainEvent.Healed -> confirm()
+        is DomainEvent.Cleaned -> confirm()
+        is DomainEvent.Healed -> if (e.gentle) confirm() else tick()
         is DomainEvent.StepGoal -> confirm()
         is DomainEvent.Petted -> if (e.effective) confirm() else tick()
         else -> Unit

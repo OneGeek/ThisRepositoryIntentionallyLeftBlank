@@ -50,6 +50,11 @@ object Tuning {
     const val OVERFEED_HUNGER = 95   // refuse meals above this
     const val PET_HAPPY = 4
     const val PET_BOND = 2
+    // Curing sickness: the free home remedy always works but the pet dislikes the
+    // bitter taste (bond hit). Shop Medicine is the gentle cure — no bond loss, a
+    // small bond gain instead.
+    const val HOME_REMEDY_BOND_PENALTY = 4
+    const val MEDICINE_BOND_BONUS = 1
     // Petting only lands a happiness/bond gain once per this window; taps in
     // between still get a reaction, just no stat change (an anti-spam throttle).
     const val PET_COOLDOWN_MS = 30_000L

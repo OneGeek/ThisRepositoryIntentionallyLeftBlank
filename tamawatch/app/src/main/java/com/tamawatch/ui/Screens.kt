@@ -289,7 +289,7 @@ fun ShopScreen(vm: TamaViewModel, pet: Pet) {
             items(Catalog.allFood) { f ->
                 ShopRow(f.iconId, "${f.display}", f.price) { vm.buyFood(f.id) { ok -> toast = if (ok) "Bought ${f.display}" else "Need more GP" } }
             }
-            item { ShopRow("item_medicine", "Medicine", Catalog.medicinePrice) { vm.buyMedicine { ok -> toast = if (ok) "Bought Medicine" else "Need more GP" } } }
+            item { ShopRow("item_medicine", "Medicine · gentle cure", Catalog.medicinePrice) { vm.buyMedicine { ok -> toast = if (ok) "Bought Medicine" else "Need more GP" } } }
             items(Catalog.cosmetics) { c ->
                 ShopRow(c.bgId, c.display, c.price) { vm.buyCosmetic(c.id) { ok -> toast = if (ok) "Unlocked ${c.display}" else "Need more GP" } }
             }
@@ -376,7 +376,7 @@ private val HelpEntries = listOf(
     Triple("ic_feed", "Feed", "Open the food menu to feed a meal or snack."),
     Triple("ic_play", "Play", "Play a mini-game to raise happiness and earn Gotchi Points."),
     Triple("ic_bathroom", "Clean", "Flush away poop so your pet doesn't get sick."),
-    Triple("ic_medicine", "Medicine", "Cure your pet when it's sick (needs a medicine in your bag)."),
+    Triple("ic_medicine", "Medicine", "Cures sickness. The free home remedy always works but your pet dislikes it (small bond hit). A Medicine from the Shop is a gentle cure — no bond loss."),
     Triple("ic_light", "Lights", "Turn the room light off so a sleepy pet can rest."),
     Triple("ic_status", "Status", "See detailed hunger, happy, energy, bond and discipline."),
     Triple("ic_shop", "Shop", "Spend Gotchi Points on food, medicine and backgrounds."),

@@ -86,4 +86,8 @@ class HomeSnapshotTest {
     @Test fun shop() = capture("05_shop") {
         ShopScreen(vm(), baby().copy(gp = 120))
     }
+
+    @Test fun help() = capture("06_help") {
+        HelpScreen(vm())
+    }
 }

@@ -53,7 +53,7 @@ class SoundBank(private val context: Context) {
         is DomainEvent.Called -> play("sfx_call")
         is DomainEvent.Fed -> play(if (e.refused) "sfx_refuse" else if (e.kind.name == "MEAL") "sfx_eat" else "sfx_drink")
         is DomainEvent.Cleaned -> play("sfx_flush")
-        is DomainEvent.Healed -> play("sfx_heal")
+        is DomainEvent.Healed -> play("sfx_heal", if (e.gentle) 1f else 0.55f)
         is DomainEvent.Petted -> if (e.effective) play("sfx_pet") else play("sfx_pet", 0.35f)
         is DomainEvent.Scolded -> play(if (e.correct) "sfx_confirm" else "sfx_error")
         is DomainEvent.EarnedGp -> play("sfx_coin", 0.6f)

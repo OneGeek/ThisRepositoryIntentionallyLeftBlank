@@ -139,6 +139,19 @@ class EngineTest {
         assertFalse((throttled.events.first() as DomainEvent.Petted).effective)
     }
 
+    @Test fun healingIsGentleWithMedicineButCostsBondAsHomeRemedy() {
+        val sick = baby().copy(stats = Stats(sick = true, bond = 40))
+        val gentle = CareEngine.heal(sick, 0, gentle = true)
+        assertFalse(gentle.pet.stats.sick)
+        assertEquals(40 + Tuning.MEDICINE_BOND_BONUS, gentle.pet.stats.bond)
+        assertTrue((gentle.events.first() as DomainEvent.Healed).gentle)
+
+        val remedy = CareEngine.heal(sick, 0, gentle = false)
+        assertFalse("home remedy still cures", remedy.pet.stats.sick)
+        assertEquals(40 - Tuning.HOME_REMEDY_BOND_PENALTY, remedy.pet.stats.bond)
+        assertFalse((remedy.events.first() as DomainEvent.Healed).gentle)
+    }
+
     private fun baby() = Pet(
         name = "Tama", species = Species.BABY, stage = Stage.BABY,
         generation = 1, bornAtMs = 0, stageStartMs = 0, lastUpdatedMs = 0,
