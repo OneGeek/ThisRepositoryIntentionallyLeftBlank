@@ -32,13 +32,13 @@ import org.robolectric.annotation.GraphicsMode
  * clipped to the round watch shape on a black backdrop, so the two can be compared
  * pixel-for-pixel. Record: `./gradlew :app:recordRoborazziDebug`.
  */
-// Galaxy Watch Ultra: 480x480 px at density 2.0 (xhdpi) => 240x240 dp. Matching the
-// device's dp AND density here makes the synthetic render 480x480 px, 1:1 with the
-// on-device capture (Settings → capture), so dp-sized elements (hubs, text) are the
-// right size relative to the screen, not just positioned right.
+// Galaxy Watch Ultra, from the on-device capture's DisplayMetrics header:
+// 480x480 px at 340dpi (density 2.125) => 226x226 dp. Matching that here makes the
+// synthetic render 480x480 px, 1:1 with the device, so dp-sized elements (hubs,
+// text) are the right size relative to the screen, not just positioned right.
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w240dp-h300dp-xhdpi")   // tall enough to hold the 480px shot node
+@Config(qualifiers = "w226dp-h300dp-340dpi")   // h tall enough to hold the 480px shot node
 class HomeSnapshotTest {
 
     @get:Rule
@@ -53,9 +53,9 @@ class HomeSnapshotTest {
         var index by mutableIntStateOf(0)
         compose.setContent {
             ProvidePixel(c.spriteBank, reduceMotion = true) {
-                // 240dp @ xhdpi => 480px, matching the Galaxy Watch Ultra 1:1.
-                Box(Modifier.size(240.dp).background(Color.Black).testTag("shot")) {
-                    Box(Modifier.size(240.dp).clip(CircleShape)) { PreviewShots[index].content(vm) }
+                // 226dp @ 340dpi => 480px, matching the Galaxy Watch Ultra 1:1.
+                Box(Modifier.size(226.dp).background(Color.Black).testTag("shot")) {
+                    Box(Modifier.size(226.dp).clip(CircleShape)) { PreviewShots[index].content(vm) }
                 }
             }
         }

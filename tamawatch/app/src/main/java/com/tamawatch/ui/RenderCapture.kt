@@ -153,6 +153,9 @@ private fun saveEverything(
         context.getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: context.filesDir,
         "TamaWatch",
     ).apply { mkdirs() }
+    // Clear old outputs first so a re-capture replaces the set instead of piling up
+    // (stale states from renamed shots would otherwise linger).
+    val cleared = clearExisting(context, dir)
     var fileCount = 0
     named.forEach { (name, bmp) ->
         runCatching {
@@ -175,11 +178,32 @@ private fun saveEverything(
     return buildString {
         appendLine("Captured ${frames.size} states")
         appendLine(header)
+        appendLine("Cleared $cleared old file(s)")
         appendLine("Files: $fileCount PNGs →")
         appendLine(dir.absolutePath)
         appendLine(galleryLine)
         appendLine("Also try: /sdcard/Pictures/TamaWatch")
     }
+}
+
+/**
+ * Delete prior outputs so a re-capture replaces the set: every "tamawatch*" file in
+ * the app dir, plus the app's own "tamawatch_%" entries in MediaStore. Returns how
+ * many were removed (files + gallery rows).
+ */
+private fun clearExisting(context: Context, dir: java.io.File): Int {
+    var removed = 0
+    dir.listFiles()?.forEach { f ->
+        if (f.name.startsWith("tamawatch") && f.delete()) removed++
+    }
+    runCatching {
+        removed += context.contentResolver.delete(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            "${MediaStore.Images.Media.DISPLAY_NAME} LIKE ?",
+            arrayOf("tamawatch%"),
+        )
+    }
+    return removed
 }
 
 /**
