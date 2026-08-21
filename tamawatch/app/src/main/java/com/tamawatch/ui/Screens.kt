@@ -261,6 +261,27 @@ fun ScreenBackdrop(modifier: Modifier = Modifier) {
 }
 
 /**
+ * A solid "tray" panel that extends from the very top of the screen down over most
+ * of the round face, with a rounded bottom. Info drawn on top of it reads with
+ * consistent contrast regardless of the gradient/vignette behind, and it visually
+ * anchors the content to the top of the display. Drawn as a BoxScope child so it
+ * sits behind the screen's content.
+ */
+@Composable
+fun BoxScope.TopTray(heightFraction: Float = 0.88f) {
+    val shape = RoundedCornerShape(bottomStart = 48.dp, bottomEnd = 48.dp)
+    Box(
+        Modifier
+            .align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .fillMaxHeight(heightFraction)
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(Color(0xFF222A40), Color(0xFF1A2032))))
+            .border(1.dp, Color(0x33FFFFFF), shape),
+    )
+}
+
+/**
  * A ScalingLazyColumn with a DETERMINISTIC initial layout: pinned scroll state and
  * fixed content padding instead of auto-centering (whose padding depends on the
  * viewport, so it settles a few px differently between Robolectric and the device).
@@ -307,6 +328,7 @@ fun FeedScreen(vm: TamaViewModel, inventory: Map<String, Int>) {
 fun StatusScreen(vm: TamaViewModel, pet: Pet) {
     Box(Modifier.fillMaxSize()) {
         ScreenBackdrop()
+        TopTray()
     PinnedScalingColumn {
         item { Text(pet.name, style = MaterialTheme.typography.title3) }
         item { Text("${pet.species.display} · Gen ${pet.generation}", style = MaterialTheme.typography.caption1) }
