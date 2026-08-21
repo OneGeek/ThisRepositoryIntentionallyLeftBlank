@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import com.tamawatch.assets.SpriteBank
 import com.tamawatch.audio.SoundBank
+import com.tamawatch.background.AttentionNotifier
 import com.tamawatch.core.data.Repository
 import com.tamawatch.core.data.SettingsStore
 import com.tamawatch.core.data.TamaDatabase
@@ -25,6 +26,7 @@ class AppContainer(context: Context) {
     val soundBank = SoundBank(app)
     val haptics = Haptics(app)
     val stepSource = StepSource(app)
+    val attentionNotifier = AttentionNotifier(app)
 }
 
 class TamaApp : Application() {

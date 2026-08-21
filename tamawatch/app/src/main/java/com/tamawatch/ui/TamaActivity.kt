@@ -46,6 +46,12 @@ class TamaActivity : ComponentActivity() {
                 }
             }
 
+            // Keep the attention notification in step with the live pet state, so it
+            // clears the instant a need is met (not just on the next background tick).
+            LaunchedEffect(Unit) {
+                vm.pet.collect { p -> p?.let { c.attentionNotifier.refresh(it) } }
+            }
+
             ProvidePixel(c.spriteBank, settings.reduceMotion) {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     WearApp(vm)

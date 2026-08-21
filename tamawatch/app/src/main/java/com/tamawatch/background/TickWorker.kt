@@ -23,7 +23,7 @@ class TickWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         c.repository.setSleepWindow(settings.sleep)
         c.repository.load()
         c.repository.tick()
-        c.repository.pet.value?.let { AttentionNotifier(applicationContext).refresh(it) }
+        c.repository.pet.value?.let { c.attentionNotifier.refresh(it) }
         return Result.success()
     }
 
