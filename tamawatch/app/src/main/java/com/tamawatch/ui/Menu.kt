@@ -1,6 +1,10 @@
 package com.tamawatch.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,8 +33,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -59,15 +63,16 @@ import com.tamawatch.core.model.Pet
 import com.tamawatch.tama
 import com.tamawatch.ui.common.PixelFrame
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.cos
-import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private const val HOLD_MS = 1050f       // hold-alone time to commit
-private const val FADE_MS = 140f        // the name pops in this fast, independent of commit
-private const val DRAG_FRAC = 0.5f      // or drag half the way toward center
+private const val FADE_MS = 120         // capsule name fades in this fast (ms)
+private const val DRAG_FRAC = 0.5f      // drag this fraction toward the center to commit
+private const val LINGER_MS = 550L      // the chosen name lingers this long after a commit
+private const val HINT_PULL = 0.24f     // release bounce: hub pulls this fraction toward center
 
 private val Gold = Color(0xFFF2C14E)
 
@@ -118,10 +123,12 @@ private fun hubsFor(vm: TamaViewModel, pet: Pet, medicineCount: Int): List<Hub> 
 }
 
 /**
- * Touch-first radial menu: five category hubs on a horseshoe. Press-and-hold a
- * hub (or drag it toward the center) — its name pops into a capsule at the center
- * and a gold ring fills; releasing early cancels. Committing opens the hub's
- * labeled list (or navigates straight to Shop/Settings). No rotary, no memorizing.
+ * Touch-first radial menu: five category hubs on a horseshoe. Press a hub and DRAG
+ * it toward the center to trigger — the name pops into a capsule that grows as you
+ * near the center, and a gold ring fills. There is no hold-to-trigger. Let go short
+ * of the center and the hub springs a little toward the center (an affordance for
+ * "drag me in"), the capsule pulsing in time. Committing opens the hub's labeled
+ * list or navigates straight to Shop/Settings; the name lingers a beat after.
  */
 @Composable
 fun RadialMenu(vm: TamaViewModel, pet: Pet) {
@@ -130,33 +137,45 @@ fun RadialMenu(vm: TamaViewModel, pet: Pet) {
     val medicineCount = inventory["item_medicine"] ?: 0
     val hubs = remember(pet.lightOn, pet.stats.sick, medicineCount) { hubsFor(vm, pet, medicineCount) }
     var openHub by remember { mutableStateOf<Hub?>(null) }
+    val scope = rememberCoroutineScope()
 
-    var pressed by remember { mutableIntStateOf(-1) }
-    var dragToward by remember { mutableFloatStateOf(0f) }
+    var pressed by remember { mutableIntStateOf(-1) }         // hub under an active drag
+    var dragProgress by remember { mutableFloatStateOf(0f) }  // 0..1 toward the center
     var startDist by remember { mutableFloatStateOf(1f) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    var labelAlpha by remember { mutableFloatStateOf(0f) }
+    val pressAlpha by animateFloatAsState(if (pressed >= 0) 1f else 0f, tween(FADE_MS), label = "capAlpha")
 
-    // Time-based progress while a hub is held. Drag can outrun the hold.
-    LaunchedEffect(pressed) {
-        if (pressed < 0) { progress = 0f; labelAlpha = 0f; return@LaunchedEffect }
-        val idx = pressed
-        var start = -1L
-        while (true) {
-            withFrameMillis { now ->
-                if (start < 0L) start = now
-                val el = (now - start).toFloat()
-                val hold = el / HOLD_MS
-                val drag = if (startDist > 0f) dragToward / (startDist * DRAG_FRAC) else 0f
-                progress = min(1f, max(0f, max(hold, drag)))
-                labelAlpha = min(1f, el / FADE_MS)
-            }
-            if (progress >= 1f) break
-        }
-        val hub = hubs.getOrNull(idx)
+    // Release affordance: an un-committed hub springs toward the center, name pulses.
+    var hintHub by remember { mutableIntStateOf(-1) }
+    var hintName by remember { mutableStateOf("") }
+    val hint = remember { Animatable(0f) }
+
+    // After a commit the chosen name lingers a beat before fading.
+    var lingerName by remember { mutableStateOf<String?>(null) }
+    val linger = remember { Animatable(0f) }
+
+    fun commit(i: Int) {
+        val hub = hubs.getOrNull(i) ?: return
         haptics.confirm()
-        if (hub != null) { if (hub.direct != null) hub.direct.invoke() else openHub = hub }
-        pressed = -1
+        lingerName = hub.name
+        scope.launch {
+            linger.snapTo(1f)
+            delay(LINGER_MS)
+            linger.animateTo(0f, tween(200))
+            if (lingerName == hub.name) lingerName = null
+        }
+        if (hub.direct != null) hub.direct.invoke() else openHub = hub
+    }
+
+    fun bounceHint(i: Int, from: Float) {
+        val hub = hubs.getOrNull(i) ?: return
+        hintHub = i; hintName = hub.name
+        haptics.tick()
+        scope.launch {
+            hint.snapTo(from.coerceIn(0f, 0.5f))
+            hint.animateTo(0.62f, tween(120))                                    // pull toward center
+            hint.animateTo(0f, spring(dampingRatio = 0.42f, stiffness = 360f))   // spring back
+            if (hintHub == i) hintHub = -1
+        }
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -171,36 +190,55 @@ fun RadialMenu(vm: TamaViewModel, pet: Pet) {
         hubs.forEachIndexed { i, hub ->
             val a = Math.toRadians(hub.angleDeg)
             val hubCenter = Offset(center.x + ringR * cos(a).toFloat(), center.y + ringR * sin(a).toFloat())
-            val topLeft = Offset(hubCenter.x - hubHalf, hubCenter.y - hubHalf)
+            val baseTopLeft = Offset(hubCenter.x - hubHalf, hubCenter.y - hubHalf)
             val thisStart = (hubCenter - center).getDistance()
+
+            // Draw-time pull toward the center during the release bounce (finger up).
+            val pull = if (i == hintHub) hint.value * HINT_PULL else 0f
+            val drawTL = Offset(
+                baseTopLeft.x + (center.x - hubCenter.x) * pull,
+                baseTopLeft.y + (center.y - hubCenter.y) * pull,
+            )
+            val hubScale = when {
+                i == pressed -> 1f + 0.16f * dragProgress
+                i == hintHub -> 1f + 0.12f * hint.value
+                else -> 1f
+            }
 
             Box(
                 Modifier
-                    .offset { IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()) }
+                    .offset { IntOffset(drawTL.x.roundToInt(), drawTL.y.roundToInt()) }
                     .size(hubDp)
-                    .graphicsLayer {
-                        val s = if (i == pressed) 1f + 0.05f * labelAlpha + 0.11f * progress else 1f
-                        scaleX = s; scaleY = s
-                    }
-                    .pointerInput(i, topLeft) {
+                    .graphicsLayer { scaleX = hubScale; scaleY = hubScale }
+                    .pointerInput(i, baseTopLeft) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
-                            if (openHub == null) {
-                                startDist = thisStart; dragToward = 0f; pressed = i
-                                haptics.tick()
-                            }
+                            if (openHub != null) return@awaitEachGesture
+                            pressed = i; startDist = thisStart; dragProgress = 0f
+                            haptics.tick()
+                            var committed = false
                             while (true) {
                                 val ev = awaitPointerEvent()
                                 val ch = ev.changes.firstOrNull() ?: break
                                 if (ch.pressed) {
-                                    val gx = topLeft.x + ch.position.x
-                                    val gy = topLeft.y + ch.position.y
+                                    val gx = baseTopLeft.x + ch.position.x
+                                    val gy = baseTopLeft.y + ch.position.y
                                     val d = Offset(gx - center.x, gy - center.y).getDistance()
-                                    dragToward = (startDist - d).coerceAtLeast(0f)
+                                    val toward = (startDist - d).coerceAtLeast(0f)
+                                    dragProgress = if (startDist > 0f)
+                                        (toward / (startDist * DRAG_FRAC)).coerceIn(0f, 1f) else 0f
                                     ch.consume()
+                                    if (dragProgress >= 1f) {
+                                        committed = true
+                                        pressed = -1
+                                        commit(i)
+                                        break
+                                    }
                                 } else {
-                                    if (pressed == i && progress < 1f) pressed = -1
+                                    val from = dragProgress
+                                    pressed = -1
+                                    if (!committed) bounceHint(i, from)
                                     break
                                 }
                             }
@@ -211,15 +249,25 @@ fun RadialMenu(vm: TamaViewModel, pet: Pet) {
             }
         }
 
-        // Center capsule with the pressed hub's name (fades in fast); the gold
-        // progress ring encircles the capsule, not the hub under the finger.
-        if (pressed in hubs.indices) {
+        // Center capsule: the active hub's name. It GROWS toward the center (closer
+        // = bigger) and pulses with the release bounce. Gold ring only while dragging.
+        val activeName: String?
+        val closeness: Float
+        val capAlpha: Float
+        when {
+            pressed in hubs.indices -> { activeName = hubs[pressed].name; closeness = dragProgress; capAlpha = pressAlpha }
+            hintHub in hubs.indices -> { activeName = hintName; closeness = hint.value; capAlpha = (0.4f + hint.value).coerceAtMost(1f) }
+            lingerName != null -> { activeName = lingerName; closeness = 1f; capAlpha = linger.value }
+            else -> { activeName = null; closeness = 0f; capAlpha = 0f }
+        }
+
+        if (activeName != null && capAlpha > 0.01f) {
             Box(
                 Modifier
                     .align(Alignment.Center)
                     .offset(y = (-4).dp)
-                    .alpha(labelAlpha)
-                    .graphicsLayer { val s = 0.92f + 0.08f * labelAlpha; scaleX = s; scaleY = s },
+                    .alpha(capAlpha)
+                    .graphicsLayer { val s = 0.9f + 0.22f * closeness; scaleX = s; scaleY = s },
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
@@ -232,27 +280,29 @@ fun RadialMenu(vm: TamaViewModel, pet: Pet) {
                         .padding(horizontal = 22.dp, vertical = 9.dp),
                 ) {
                     Text(
-                        hubs[pressed].name,
+                        activeName,
                         style = MaterialTheme.typography.title2,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF6F2EA),
                     )
                 }
-                // Gold progress ring hugging the capsule's pill outline.
-                Canvas(Modifier.matchParentSize()) {
-                    val sw = 4.dp.toPx()
-                    val half = sw / 2f
-                    val rad = (size.height - sw) / 2f
-                    val rr = RoundRect(
-                        left = half, top = half,
-                        right = size.width - half, bottom = size.height - half,
-                        cornerRadius = CornerRadius(rad, rad),
-                    )
-                    val path = Path().apply { addRoundRect(rr) }
-                    val pm = PathMeasure().apply { setPath(path, false) }
-                    val seg = Path()
-                    pm.getSegment(0f, pm.length * progress, seg, true)
-                    drawPath(seg, color = Gold, style = Stroke(width = sw, cap = StrokeCap.Round))
+                if (pressed in hubs.indices) {
+                    // Gold progress ring hugging the capsule's pill outline.
+                    Canvas(Modifier.matchParentSize()) {
+                        val sw = 4.dp.toPx()
+                        val half = sw / 2f
+                        val rad = (size.height - sw) / 2f
+                        val rr = RoundRect(
+                            left = half, top = half,
+                            right = size.width - half, bottom = size.height - half,
+                            cornerRadius = CornerRadius(rad, rad),
+                        )
+                        val path = Path().apply { addRoundRect(rr) }
+                        val pm = PathMeasure().apply { setPath(path, false) }
+                        val seg = Path()
+                        pm.getSegment(0f, pm.length * dragProgress, seg, true)
+                        drawPath(seg, color = Gold, style = Stroke(width = sw, cap = StrokeCap.Round))
+                    }
                 }
             }
         }
