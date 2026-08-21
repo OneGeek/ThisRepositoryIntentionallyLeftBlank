@@ -1,12 +1,15 @@
 package com.tamawatch.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +24,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -41,9 +46,31 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tamawatch.core.model.*
 import com.tamawatch.ui.common.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
+private const val PET_MAX_STRETCH = 0.42f   // max elongation along the drag axis
+private const val PET_DRAG_FOLLOW = 0.5f    // how far the pet translates toward the drag
+
+/** Angle of the drag vector in degrees (0 when there's essentially no drag). */
+private fun dragAngleDeg(x: Float, y: Float): Float {
+    val m = kotlin.math.hypot(x, y)
+    return if (m > 0.5f) Math.toDegrees(kotlin.math.atan2(y, x).toDouble()).toFloat() else 0f
+}
+
+/** Stretch amount (0..PET_MAX_STRETCH) from the drag magnitude. */
+private fun dragStretch(x: Float, y: Float, maxPx: Float): Float {
+    val m = kotlin.math.hypot(x, y)
+    return (m / maxPx).coerceIn(0f, 1f) * PET_MAX_STRETCH
+}
+
+/** Clamp an offset's length to [maxLen], keeping direction. */
+private fun clampLen(o: Offset, maxLen: Float): Offset {
+    val m = o.getDistance()
+    return if (m <= maxLen || m == 0f) o else o * (maxLen / m)
+}
 
 /** The pet's current sprite id + animation tag from its state. */
 fun poseFor(pet: Pet): Pair<String, String> {
@@ -173,6 +200,17 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
         bounce.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 600f))
     }
 
+    // Procedural grab-and-stretch: dragging the pet elongates it toward the drag
+    // (with a perpendicular squash) and translates it a little toward the finger;
+    // letting go springs it back with a wobble. An EXTRA layer over the frame
+    // animation + the tap bounce. `live` is the drag offset (px); the release
+    // spring animates it back to zero.
+    var live by remember { mutableStateOf(Offset.Zero) }
+    var springJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val scope = rememberCoroutineScope()
+    val maxDragPx = with(LocalDensity.current) { 96.dp.toPx() } * 0.72f
+    val feet = TransformOrigin(0.5f, 1f)
+
     // The rug/ground is its own element, pinned at the grounded spot near the
     // bottom. It is deliberately independent of the pet: raising the pet must
     // not lift the floor, so this stays put while the pet box sits higher.
@@ -192,25 +230,76 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
             .align(Alignment.Center)
             .offset(y = (-14).dp)
             .size(96.dp)
-            .pointerInput(pet.species) {
-                detectTapGestures(onTap = {
-                    reactEffective = System.currentTimeMillis() - lastPetMs >= Tuning.PET_COOLDOWN_MS
-                    reactKey++
-                    vm.petIt()
-                })
+            .pointerInput(pet.species, reduce) {
+                // One gesture handles both: a drag stretches the pet (unless
+                // reduce-motion); a press with no drag pets it (the old tap).
+                val maxDrag = size.width * 0.72f
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    springJob?.cancel()          // grab cleanly, cutting any bounce
+                    var raw = Offset.Zero
+                    var dragging = false
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val ch = ev.changes.firstOrNull() ?: break
+                        if (ch.pressed) {
+                            raw += ch.positionChange()
+                            if (!reduce && !dragging && raw.getDistance() > viewConfiguration.touchSlop) {
+                                dragging = true
+                            }
+                            if (dragging) {
+                                live = clampLen(raw, maxDrag)
+                                ch.consume()
+                            }
+                        } else {
+                            if (dragging) {
+                                springJob = scope.launch {
+                                    val anim = Animatable(live, Offset.VectorConverter)
+                                    anim.animateTo(Offset.Zero, spring(dampingRatio = 0.3f, stiffness = 340f)) {
+                                        live = value
+                                    }
+                                }
+                            } else {
+                                reactEffective = System.currentTimeMillis() - lastPetMs >= Tuning.PET_COOLDOWN_MS
+                                reactKey++
+                                vm.petIt()
+                            }
+                            break
+                        }
+                    }
+                }
             },
         contentAlignment = Alignment.BottomCenter,
     ) {
         // Feet pinned to the bottom of this (raised) box; headroom overflows up.
-        // The bounce scales from the feet.
+        // Transform stack (outer→inner): grab-follow translation, then a directional
+        // stretch (rotate to the drag axis, scale, rotate back), then the tap bounce.
         PetSprite(
             id, tag, 3,
             Modifier
                 .align(Alignment.BottomCenter)
                 .graphicsLayer {
+                    translationX = live.x * PET_DRAG_FOLLOW
+                    translationY = live.y * PET_DRAG_FOLLOW
+                }
+                .graphicsLayer {
+                    rotationZ = dragAngleDeg(live.x, live.y)
+                    transformOrigin = feet
+                }
+                .graphicsLayer {
+                    val amt = dragStretch(live.x, live.y, maxDragPx)
+                    scaleX = 1f + amt
+                    scaleY = 1f - amt * 0.55f
+                    transformOrigin = feet
+                }
+                .graphicsLayer {
+                    rotationZ = -dragAngleDeg(live.x, live.y)
+                    transformOrigin = feet
+                }
+                .graphicsLayer {
                     val s = if (reduce) 1f else bounce.value
                     scaleX = s; scaleY = s
-                    transformOrigin = TransformOrigin(0.5f, 1f)
+                    transformOrigin = feet
                 },
         )
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
