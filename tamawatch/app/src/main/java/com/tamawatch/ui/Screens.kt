@@ -76,12 +76,14 @@ val Rugs = listOf(
 fun rugAsset(id: Int): String? = Rugs.firstOrNull { it.id == id }?.asset
 fun rugName(id: Int): String = Rugs.firstOrNull { it.id == id }?.name ?: "None"
 
-/** A selected rug plus a soft contact shadow, drawn under the pet/egg's feet. */
+/** A selected rug plus (optionally) a soft contact shadow, drawn under the feet.
+ *  Creature sprites already carry their own baked grounding shadow, so pass
+ *  shadow=false when a creature stands on the rug to avoid a doubled shadow. */
 @Composable
-fun Ground(rugId: Int, width: Dp, modifier: Modifier = Modifier) {
+fun Ground(rugId: Int, width: Dp, modifier: Modifier = Modifier, shadow: Boolean = true) {
     Box(modifier.width(width), contentAlignment = Alignment.BottomCenter) {
         rugAsset(rugId)?.let { PixelFrame(it, 0, Modifier.fillMaxWidth()) }
-        PixelFrame("fx_shadow", 0, Modifier.fillMaxWidth(0.86f))
+        if (shadow) PixelFrame("fx_shadow", 0, Modifier.fillMaxWidth(0.86f))
     }
 }
 
@@ -178,7 +180,9 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
         Modifier.align(Alignment.Center).offset(y = 14.dp).size(96.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp))
+        // shadow=false: the creature sprite already carries its own baked shadow,
+        // so the rug here is just the mat (no second, floating shadow).
+        Ground(rugId, 118.dp, Modifier.align(Alignment.BottomCenter).offset(y = 4.dp), shadow = false)
         // Poop belongs on the floor, so it lives with the rug, not the raised pet.
         if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
     }

@@ -58,6 +58,7 @@ import androidx.wear.compose.material.Text
 import com.tamawatch.core.model.Pet
 import com.tamawatch.tama
 import com.tamawatch.ui.common.PixelFrame
+import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -67,7 +68,6 @@ import kotlin.math.sin
 private const val HOLD_MS = 1050f       // hold-alone time to commit
 private const val FADE_MS = 140f        // the name pops in this fast, independent of commit
 private const val DRAG_FRAC = 0.5f      // or drag half the way toward center
-private const val ROW_HOLD_MS = 720f
 
 private val Gold = Color(0xFFF2C14E)
 
@@ -300,43 +300,30 @@ private fun BoxScope.SubmenuSheet(hub: Hub, onClose: () -> Unit) {
 @Composable
 private fun MenuRow(item: MenuItem, onDone: () -> Unit) {
     val haptics = LocalContext.current.tama.haptics
-    var holding by remember { mutableStateOf(false) }
-    var fill by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(holding) {
-        if (!holding) { fill = 0f; return@LaunchedEffect }
-        var start = -1L
-        while (true) {
-            withFrameMillis { now -> if (start < 0L) start = now; fill = min(1f, (now - start) / ROW_HOLD_MS) }
-            if (fill >= 1f) break
-        }
-        haptics.confirm(); item.run(); onDone()
+    // Two-step confirm for `confirm` rows: first tap arms (turns teal, "confirm?"),
+    // second tap runs it. Taps (not holds) so a scroll-drag never triggers it.
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(armed) {
+        if (armed) { delay(3500); armed = false }   // auto-disarm a stray first tap
     }
 
-    val base = Modifier
-        .fillMaxWidth()
-        .clip(RoundedCornerShape(16.dp))
-        .background(Color(0x14FFFFFF))
-    val gesture = if (item.confirm) {
-        Modifier.pointerInput(Unit) {
-            awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
-                holding = true; haptics.tick()
-                while (true) {
-                    val ev = awaitPointerEvent()
-                    if (ev.changes.none { it.pressed }) break
-                }
-                holding = false
-            }
+    val bg = if (armed) Color(0x333CA0A5) else Color(0x14FFFFFF)
+    val onClick: () -> Unit = if (item.confirm) {
+        {
+            if (armed) { armed = false; haptics.confirm(); item.run(); onDone() }
+            else { armed = true; haptics.tick() }
         }
     } else {
-        Modifier.clickable { haptics.confirm(); item.run(); onDone() }
+        { haptics.confirm(); item.run(); onDone() }
     }
 
-    Box(base.then(gesture)) {
-        if (item.confirm && fill > 0f) {
-            Box(Modifier.fillMaxWidth(fill).fillMaxHeight().background(Color(0x333CA0A5)))
-        }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(bg)
+            .clickable { onClick() },
+    ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -344,15 +331,18 @@ private fun MenuRow(item: MenuItem, onDone: () -> Unit) {
         ) {
             PixelFrame(item.icon, 0, Modifier.size(26.dp))
             Column(Modifier.weight(1f)) {
-                Text(item.name, style = MaterialTheme.typography.button)
+                Text(
+                    if (item.confirm && armed) "${item.name}?" else item.name,
+                    style = MaterialTheme.typography.button,
+                )
                 item.subtitle?.let {
                     Text(it, style = MaterialTheme.typography.caption3, color = Color(0xFFAAB1C6))
                 }
             }
             Text(
-                if (item.confirm) "hold" else "tap",
+                if (!item.confirm) "tap" else if (armed) "confirm" else "tap ×2",
                 style = MaterialTheme.typography.caption3,
-                color = Color(0xFFAAB1C6),
+                color = if (armed) Color(0xFF8FE3C0) else Color(0xFFAAB1C6),
                 textAlign = TextAlign.End,
             )
         }
