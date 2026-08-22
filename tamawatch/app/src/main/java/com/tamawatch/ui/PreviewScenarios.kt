@@ -36,21 +36,21 @@ private fun previewBaby(
 
 val PreviewShots: List<PreviewShot> = listOf(
     PreviewShot("01_egg", "Egg") { vm ->
-        HomeScreen(vm, Pet(name = "Tama"), ownsBeach = false, ownsSpace = false, rugId = 4)
+        HomeScreen(vm, Pet(name = "Tama"), ownsBeach = false, ownsSpace = false, rugId = 4, coatId = 0)
     },
     PreviewShot("02_home", "Home") { vm ->
-        HomeScreen(vm, previewBaby(), ownsBeach = false, ownsSpace = false, rugId = 1)
+        HomeScreen(vm, previewBaby(), ownsBeach = false, ownsSpace = false, rugId = 1, coatId = 1)
     },
     PreviewShot("03_sleeping", "Sleeping") { vm ->
         HomeScreen(
             vm, previewBaby(hunger = 45, happy = 55).copy(asleep = true, lightOn = false),
-            ownsBeach = false, ownsSpace = false, rugId = 2,
+            ownsBeach = false, ownsSpace = false, rugId = 2, coatId = 0,
         )
     },
     PreviewShot("04_sick", "Sick") { vm ->
         HomeScreen(
             vm, previewBaby(hunger = 40, happy = 50, sick = true, dirty = true),
-            ownsBeach = false, ownsSpace = false, rugId = 3,
+            ownsBeach = false, ownsSpace = false, rugId = 3, coatId = 0,
         )
     },
     PreviewShot("05_status", "Status") { vm ->

@@ -16,6 +16,7 @@ data class Settings(
     val sleep: SleepWindow = SleepWindow(),
     val onboarded: Boolean = false,
     val rugId: Int = 1,
+    val coatId: Int = 0,
 )
 
 private val Context.dataStore by preferencesDataStore(name = "tama_settings")
@@ -29,6 +30,7 @@ class SettingsStore(private val context: Context) {
         val sleepEnd = intPreferencesKey("sleep_end")
         val onboarded = booleanPreferencesKey("onboarded")
         val rug = intPreferencesKey("rug_id")
+        val coat = intPreferencesKey("coat_id")
     }
 
     val flow: Flow<Settings> = context.dataStore.data.map { p ->
@@ -39,6 +41,7 @@ class SettingsStore(private val context: Context) {
             sleep = SleepWindow(p[Keys.sleepStart] ?: 22, p[Keys.sleepEnd] ?: 8),
             onboarded = p[Keys.onboarded] ?: false,
             rugId = p[Keys.rug] ?: 1,
+            coatId = p[Keys.coat] ?: 0,
         )
     }
 
@@ -51,6 +54,7 @@ class SettingsStore(private val context: Context) {
                 sleep = SleepWindow(prefs[Keys.sleepStart] ?: 22, prefs[Keys.sleepEnd] ?: 8),
                 onboarded = prefs[Keys.onboarded] ?: false,
                 rugId = prefs[Keys.rug] ?: 1,
+                coatId = prefs[Keys.coat] ?: 0,
             )
             val next = block(cur)
             prefs[Keys.sound] = next.soundOn
@@ -60,6 +64,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.sleepEnd] = next.sleep.endHour
             prefs[Keys.onboarded] = next.onboarded
             prefs[Keys.rug] = next.rugId
+            prefs[Keys.coat] = next.coatId
         }
     }
 }

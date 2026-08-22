@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,10 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.positionChange
@@ -48,6 +56,7 @@ import com.tamawatch.ui.common.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -115,7 +124,7 @@ fun Ground(rugId: Int, width: Dp, modifier: Modifier = Modifier, shadow: Boolean
 }
 
 @Composable
-fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean, rugId: Int) {
+fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean, rugId: Int, coatId: Int) {
     val bg = when {
         pet.stage == Stage.EGG -> "bg_egg"
         pet.asleep || !pet.lightOn -> "bg_room_night"
@@ -143,7 +152,7 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
 
         // Centered pet, the touch-first radial menu around it, then the status ON
         // TOP so a jumping pet slips behind the meters instead of being clipped.
-        PetCenter(vm, pet, rugId)
+        PetCenter(vm, pet, rugId, coatId)
         RadialMenu(vm, pet)
         TopStatus(pet)
     }
@@ -171,7 +180,7 @@ private fun BoxScope.TopStatus(pet: Pet) {
  * the throttle reads as a mood, never a timer.
  */
 @Composable
-private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
+private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: Int) {
     val (id, tag) = poseFor(pet)
     val reduce = LocalReduceMotion.current
     val lastPetMs by vm.lastPetMs.collectAsStateWithLifecycle()
@@ -300,6 +309,14 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int) {
                     val s = if (reduce) 1f else bounce.value
                     scaleX = s; scaleY = s
                     transformOrigin = feet
+                }
+                // Coat pattern: rendered into an offscreen buffer so BlendMode.SrcAtop
+                // clips the markings to the sprite's own silhouette (transparent
+                // headroom stays clear). Innermost, so it rides every transform above.
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    if (coatId != 0) drawCoat(coatId)
                 },
         )
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
@@ -495,6 +512,7 @@ fun SettingsScreen(vm: TamaViewModel, s: com.tamawatch.core.data.Settings) {
         item { Button(onClick = { vm.setMic(!s.micEnabled) }, modifier = Modifier.fillMaxWidth()) { Text("Mic talk: ${if (s.micEnabled) "On" else "Off"}") } }
         item { Text("Sleep ${s.sleep.startHour}:00–${s.sleep.endHour}:00", style = MaterialTheme.typography.caption2) }
         item { Button(onClick = { vm.go(Screen.Rugs) }, modifier = Modifier.fillMaxWidth()) { Text("Rug: ${rugName(s.rugId)}") } }
+        item { Button(onClick = { vm.go(Screen.Coats) }, modifier = Modifier.fillMaxWidth()) { Text("Coat: ${coatName(s.coatId)}") } }
         item { Button(onClick = { vm.go(Screen.Help) }, modifier = Modifier.fillMaxWidth()) { Text("Help: what the icons mean") } }
         item {
             Button(onClick = { vm.startCapture() }, modifier = Modifier.fillMaxWidth()) {
@@ -529,6 +547,133 @@ fun RugScreen(vm: TamaViewModel, current: Int) {
             }
         }
         item { BackButton(vm) }
+    }
+}
+
+// ---------------------------------------------------------------- Coats
+/** Selectable coat patterns painted over the pet's silhouette. id 0 = plain. */
+data class CoatStyle(val id: Int, val name: String)
+
+val Coats = listOf(
+    CoatStyle(0, "None"),
+    CoatStyle(1, "Tiger"),
+    CoatStyle(2, "Leopard"),
+    CoatStyle(3, "Triangles"),
+)
+
+fun coatName(id: Int): String = Coats.firstOrNull { it.id == id }?.name ?: "None"
+
+/** Coat picker: tap a pattern to paint it onto your pet. */
+@Composable
+fun CoatScreen(vm: TamaViewModel, current: Int) {
+    ScalingLazyColumn(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        item { Text("Choose a coat", style = MaterialTheme.typography.title3) }
+        Coats.forEach { c ->
+            item {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (c.id == current) Color(0x33FFFFFF) else Color(0x22000000))
+                        .clickable { vm.setCoat(c.id) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    CoatSwatch(c.id, Modifier.width(46.dp).height(24.dp))
+                    Text(c.name, style = MaterialTheme.typography.button, modifier = Modifier.weight(1f))
+                    if (c.id == current) Text("✓", style = MaterialTheme.typography.title3)
+                }
+            }
+        }
+        item { BackButton(vm) }
+    }
+}
+
+/** A little preview tile: the pattern painted over a fur-toned rounded rect. */
+@Composable
+private fun CoatSwatch(coatId: Int, modifier: Modifier = Modifier) {
+    Canvas(modifier.clip(RoundedCornerShape(6.dp))) {
+        drawRect(Color(0xFFD8B486))                 // fur-toned base
+        if (coatId != 0) drawCoat(coatId)
+    }
+}
+
+/** Paint the chosen coat pattern. Every mark uses BlendMode.SrcAtop, so on the pet
+ *  it clips to the sprite silhouette, and on the opaque swatch it shows in full.
+ *  Placement is deterministic (golden-ratio fractions), so it never shimmers. */
+private fun DrawScope.drawCoat(coatId: Int) {
+    when (coatId) {
+        1 -> tigerCoat()
+        2 -> leopardCoat()
+        3 -> triangleCoat()
+    }
+}
+
+private fun frac(x: Float): Float = x - floor(x)
+private const val GOLD = 0.6180339887f
+
+/** Curved vertical flank stripes. */
+private fun DrawScope.tigerCoat() {
+    val w = size.width; val h = size.height
+    val ink = Color(0xFF241708)
+    val count = 7
+    for (i in 0 until count) {
+        val t = i / (count - 1f)
+        val cx = w * (0.13f + 0.74f * t)
+        val bow = (frac(i * GOLD) - 0.5f) * w * 0.16f
+        val yTop = h * (0.26f + 0.06f * frac(i * 0.34f))
+        val yBot = h * (0.97f - 0.05f * frac(i * 0.78f))
+        val path = Path()
+        val steps = 8
+        for (s in 0..steps) {
+            val f = s / steps.toFloat()
+            val y = yTop + (yBot - yTop) * f
+            val x = cx + bow * sin(f * Math.PI).toFloat()
+            if (s == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        val sw = w * (0.055f + 0.028f * frac(i * GOLD))
+        drawPath(
+            path, ink, alpha = 0.6f,
+            style = Stroke(width = sw, cap = StrokeCap.Round),
+            blendMode = BlendMode.SrcAtop,
+        )
+    }
+}
+
+/** Scattered rosettes: a dark ring around a small center dot. */
+private fun DrawScope.leopardCoat() {
+    val w = size.width; val h = size.height
+    val ink = Color(0xFF2E1B08)
+    val n = 16
+    for (i in 0 until n) {
+        val cx = w * (0.14f + 0.72f * frac(i * GOLD))
+        val cy = h * (0.30f + 0.66f * frac(i * 0.4142136f))
+        val r = w * (0.05f + 0.03f * frac(i * 0.7548777f))
+        drawCircle(ink, r, Offset(cx, cy), alpha = 0.6f,
+            style = Stroke(width = w * 0.022f), blendMode = BlendMode.SrcAtop)
+        drawCircle(ink, r * 0.3f, Offset(cx, cy), alpha = 0.55f, blendMode = BlendMode.SrcAtop)
+    }
+}
+
+/** Scattered filled triangles at varied sizes and rotations. */
+private fun DrawScope.triangleCoat() {
+    val w = size.width; val h = size.height
+    val ink = Color(0xFF26170A)
+    val n = 18
+    for (i in 0 until n) {
+        val cx = w * (0.14f + 0.72f * frac(i * GOLD))
+        val cy = h * (0.30f + 0.66f * frac(i * 0.3183099f))
+        val s = w * (0.06f + 0.045f * frac(i * 0.7548777f))
+        val rot = frac(i * 0.9f) * 6.2831855f
+        val path = Path()
+        for (k in 0..2) {
+            val a = rot + k * 2.0943952f          // 120° apart
+            val x = cx + s * cos(a)
+            val y = cy + s * sin(a)
+            if (k == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(path, ink, alpha = 0.6f, blendMode = BlendMode.SrcAtop)
     }
 }
 
