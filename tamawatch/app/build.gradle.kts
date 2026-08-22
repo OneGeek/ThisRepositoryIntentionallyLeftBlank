@@ -38,6 +38,13 @@ android {
 
     buildFeatures { compose = true }
 
+    lint {
+        // False positive: this is a pure Compose ComponentActivity using the
+        // androidx.activity ActivityResult API — there is no androidx.fragment
+        // dependency, so the fragment-version check does not apply.
+        disable += "InvalidFragmentVersionForActivityResult"
+    }
+
     // Keep generated pixel art un-scaled across densities.
     androidResources { noCompress += listOf("json") }
 
