@@ -88,16 +88,24 @@ Runtime overlays that need to land *on the pet's face* (the annoyed brows/vein) 
 
 ---
 
-## Future: a runtime part rig (customization + per-part deformation)
+## The runtime part rig (implemented)
 
-Today parts are a **generation-time** concept only; the runtime sees a flat frame plus a handful of ad-hoc overlays. Two wants push toward promoting parts to **first-class runtime objects**:
+The interactive **idle** pose is no longer a single flat frame — it is composited from parts at runtime, so a drag can deform the body while merely *shifting* the face/arms/feature and sliding the shadow horizontally. This is the 2D-rig best practice: named slots with pivot **anchors**, a parent→child transform, and art (skin) kept separate from structure (rig) so accessories attach without editing baked art. Non-idle poses (happy/sick/sleep/call) keep their richer baked-frame animation and the whole-bitmap stretch.
 
-1. **Per-part stretch** — stretch the body shape/pattern, but merely *shift* the eyes/nose/mouth/hands by the stretch amount (keeping their shape), and shift the shadow horizontally only.
-2. **Customization** — swap or parent accessories (hats, held items, alt eyes) without editing baked art.
+**Generation** — `generate_parts.py` (run after `generate_assets.py`; also wired into `tools/build.sh --gen`) emits, per creature, the part PNGs at the neutral pose and their attach anchors, merged into a `parts` section of the manifest:
 
-Best practice for this is a small **2D transform hierarchy / rig**: named parts (slots) with pivot **anchors**, parent→child links, and art (skin) kept separate from structure (rig) so a customization swaps a slot's attachment without touching the rig. The migration that fits this stack:
+| role | id | runtime transform |
+|------|----|-------------------|
+| shadow | `spr_<c>_shadow` | horizontal translate only |
+| feature | `spr_<c>_feature` | shift by `M(anchor)−anchor` |
+| body | `spr_<c>_body` | the stretch `M` (+ coat, SrcAtop) + breath |
+| arms | `spr_<c>_arms` | shift |
+| face / faceBlink | `spr_<c>_face[_blink]` | shift; swap on blink |
 
-- Phase ① emits each part as its own frame-strip **plus an anchor point**, recorded in the manifest (formalizing the implicit face geometry above).
-- Runtime composites the parts through a parent transform. The body's stretch matrix `M` is applied to each child's anchor; the child is translated by `M(anchor) − anchor` **without scaling** — that is exactly "keep shape, shift by the stretch amount." The shadow is unparented from the vertical stretch and takes horizontal translate only.
+It reuses draw_creature's exact neutral geometry, so a composited part stack equals the baked idle frame at rest (verified). Anchors: `feet` (stretch pivot), `face`, `feature`, `arms`, plus `headTop`/`handL`/`handR` for accessories.
 
-This is deferred, not done. See the architecture note accompanying this change for scope and tradeoffs (frame-baked motion like blink/bob would need to move to per-part frames or runtime transforms).
+**Runtime** — `SpriteBank.parts(id)` returns a `PartRig` (layer ids + anchors); `RiggedPet` (Screens.kt) composites the layers. The body carries the directional stretch `M = R(θ)·S·R(−θ)` about the feet; each shifting part is translated by `M(anchor) − anchor` with **no scale** ("keep shape, shift by the stretch amount"); the shadow takes horizontal translate only. `AngerOverlay` now reads its face position from the rig anchor instead of a hard-coded constant. `RigAttachment(anchor, content)` pins an accessory to a slot so it rides the stretch — the seam for hat/held-item customization.
+
+**Tests** — `RigSnapshotTest` captures the rig under fixed drags (rest, right, up, diagonal+coat, +hat) so the per-part behavior is pinned without a device.
+
+**Tradeoff** — the idle rig drives its own life (a slow breath + blink); the baked idle bob/sway is not reproduced on the interactive pose. Extending the rig to the other poses would mean moving their baked motion (blink, arm-up, squash) to per-part frames or runtime transforms.

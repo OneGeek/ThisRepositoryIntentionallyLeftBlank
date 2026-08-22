@@ -30,7 +30,7 @@ fi
 # Optional: regenerate all art/audio from the Python generators.
 if [ "${1:-}" = "--gen" ]; then
   echo "==> Regenerating assets"
-  ( cd assets-src && python3 generate_assets.py )
+  ( cd assets-src && python3 generate_assets.py && python3 generate_parts.py )
 fi
 
 # --- signed release APK ------------------------------------------------------

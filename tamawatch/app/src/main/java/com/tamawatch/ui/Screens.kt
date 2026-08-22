@@ -410,7 +410,7 @@ data class RigAttachment(val anchor: String, val content: @Composable () -> Unit
  * Anchors come from the manifest, so no face geometry is hard-coded here.
  */
 @Composable
-private fun BoxScope.RiggedPet(
+internal fun BoxScope.RiggedPet(
     rig: PartRig,
     coatId: Int,
     live: Offset,
