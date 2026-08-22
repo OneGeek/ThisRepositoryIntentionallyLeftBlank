@@ -1,0 +1,465 @@
+<title>TamaWatch Layer Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root{
+    --paper:#E8EBF1; --surface:#F7F8FB; --surface-2:#EFF1F6;
+    --ink:#1B1F2E; --muted:#5C627A; --faint:#8B90A4;
+    --line:#C7CDDA; --line-soft:#D9DEE8;
+    --gen:#B96A16; --gen-soft:#B96a1622;
+    --run:#137e79; --run-soft:#137e7920;
+    --pop:#D63A2C;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --disp:"Bricolage Grotesque",var(--sans);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#101219; --surface:#191c27; --surface-2:#20242f;
+      --ink:#E9ECF4; --muted:#9BA1B6; --faint:#767c92;
+      --line:#2C3141; --line-soft:#242836;
+      --gen:#E0973B; --gen-soft:#E0973b1f;
+      --run:#46B8B2; --run-soft:#46b8b21f;
+      --pop:#F0584A;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#101219; --surface:#191c27; --surface-2:#20242f;
+    --ink:#E9ECF4; --muted:#9BA1B6; --faint:#767c92;
+    --line:#2C3141; --line-soft:#242836;
+    --gen:#E0973B; --gen-soft:#E0973b1f;
+    --run:#46B8B2; --run-soft:#46b8b21f;
+    --pop:#F0584A;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px; margin:0 auto; padding:clamp(28px,5vw,68px) clamp(18px,4vw,40px) 96px;}
+
+  /* ---- header ---- */
+  header{display:grid; grid-template-columns:auto 1fr; gap:22px 26px; align-items:center; margin-bottom:14px;}
+  .emblem{width:66px;height:66px;flex:none}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;}
+  h1{font-family:var(--disp); font-weight:700; font-size:clamp(30px,5.4vw,50px); line-height:1.02; margin:0; letter-spacing:-.015em; text-wrap:balance;}
+  .lede{grid-column:1/-1; max-width:64ch; color:var(--muted); font-size:clamp(15px,1.6vw,17px); margin:8px 0 0;}
+  .legend{grid-column:1/-1; display:flex; flex-wrap:wrap; gap:18px 26px; margin-top:20px; padding-top:18px; border-top:1px solid var(--line-soft); font-family:var(--mono); font-size:12.5px;}
+  .legend span{display:inline-flex; align-items:center; gap:9px; color:var(--muted);}
+  .swatch{width:26px;height:0;border-top-width:2.5px;border-top-style:solid;display:inline-block}
+  .swatch.g{border-color:var(--gen)} .swatch.r{border-color:var(--run)} .swatch.p{border-color:var(--pop)}
+  .swatch.dash{border-top-style:dashed}
+
+  /* ---- sections ---- */
+  section{margin-top:clamp(46px,7vw,80px);}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:6px;}
+  .phase{font-family:var(--mono); font-weight:500; font-size:13px; letter-spacing:.14em; padding:4px 11px; border-radius:100px; white-space:nowrap;}
+  .phase.g{color:var(--gen); background:var(--gen-soft); border:1px solid var(--gen);}
+  .phase.r{color:var(--run); background:var(--run-soft); border:1px solid var(--run);}
+  h2{font-family:var(--disp); font-weight:700; font-size:clamp(22px,3.4vw,32px); margin:0; letter-spacing:-.01em;}
+  .sec-lede{max-width:70ch; color:var(--muted); margin:2px 0 30px; font-size:15.5px;}
+  .sec-lede code{font-family:var(--mono); font-size:.88em; color:var(--ink); background:var(--surface-2); padding:1px 5px; border-radius:5px;}
+
+  /* ---- figures ---- */
+  figure{margin:0 0 34px; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:clamp(16px,2.4vw,26px); overflow:hidden;}
+  .fig-scroll{overflow-x:auto;}
+  figure svg{width:100%; height:auto; display:block; min-width:540px;}
+  figcaption{margin-top:14px; padding-top:13px; border-top:1px solid var(--line-soft); color:var(--muted); font-size:13.5px; max-width:78ch;}
+  figcaption b{color:var(--ink); font-weight:600;}
+  figcaption code, .sec-lede code, .seam code{font-family:var(--mono);}
+
+  /* ---- svg shared classes ---- */
+  .node{fill:var(--surface-2); stroke:var(--line); stroke-width:1.5;}
+  .node.g{stroke:var(--gen);} .node.r{stroke:var(--run);} .node.p{stroke:var(--pop);}
+  .plane{stroke-width:1.5;}
+  .fill-run{fill:var(--run-soft);} .fill-gen{fill:var(--gen-soft);}
+  .ttl{fill:var(--ink); font-family:var(--mono); font-weight:500; font-size:13px;}
+  .sub{fill:var(--muted); font-family:var(--sans); font-size:11.5px;}
+  .tag{fill:var(--faint); font-family:var(--mono); font-size:10.5px;}
+  .zn{fill:var(--faint); font-family:var(--mono); font-size:11px;}
+  .edge{stroke:var(--muted); stroke-width:1.6; fill:none;}
+  .edge.g{stroke:var(--gen);} .edge.r{stroke:var(--run);} .edge.p{stroke:var(--pop);}
+  .edge.dash{stroke-dasharray:5 4;}
+  .elab{fill:var(--muted); font-family:var(--mono); font-size:11px;}
+  .elab.g{fill:var(--gen);} .elab.r{fill:var(--run);} .elab.p{fill:var(--pop);}
+  .ah path{fill:var(--muted);} .ah.g path{fill:var(--gen);} .ah.r path{fill:var(--run);} .ah.p path{fill:var(--pop);}
+  .art-ink{stroke:var(--ink); fill:none; stroke-width:2;}
+  .art-cream{fill:var(--surface); stroke:var(--ink); stroke-width:2;}
+
+  .seam{margin:0 0 8px; display:flex; gap:14px; align-items:flex-start; background:var(--surface-2); border:1px dashed var(--line); border-left:3px solid var(--run); border-radius:12px; padding:15px 18px; font-size:14px; color:var(--muted);}
+  .seam b{color:var(--ink)}
+  .seam .k{font-family:var(--mono); font-size:20px; line-height:1; color:var(--run); flex:none; margin-top:2px}
+
+  footer{margin-top:60px; padding-top:20px; border-top:1px solid var(--line-soft); color:var(--faint); font-family:var(--mono); font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  a{color:var(--run)}
+  @media (max-width:560px){ header{grid-template-columns:1fr} .emblem{display:none} }
+</style>
+
+<div class="wrap">
+  <header>
+    <svg class="emblem" viewBox="0 0 66 66" role="img" aria-label="TamaWatch round-face emblem">
+      <circle cx="33" cy="33" r="31" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="33" cy="33" r="31" fill="none" stroke="var(--run)" stroke-width="2" stroke-dasharray="3 5" opacity="0.7"/>
+      <ellipse cx="33" cy="47" rx="16" ry="4.5" fill="var(--run-soft)" stroke="var(--run)" stroke-width="1.5"/>
+      <ellipse cx="33" cy="34" rx="12" ry="13" class="art-cream"/>
+      <line x1="33" y1="21" x2="33" y2="15" stroke="var(--ink)" stroke-width="2"/>
+      <circle cx="33" cy="13" r="2.6" fill="var(--pop)"/>
+      <path d="M25 31 L30 33 M41 31 L36 33" stroke="var(--ink)" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M30 39 Q33 42 36 39" stroke="var(--pop)" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <p class="eyebrow">Wear OS · pixel-art virtual pet</p>
+      <h1>TamaWatch Layer Atlas</h1>
+    </div>
+    <p class="lede">Every pixel on the watch face is a stack. This maps that stack twice — how the art is <em>baked</em> ahead of time, and how it is <em>composited</em> live — and shows the single seam that joins the two.</p>
+    <div class="legend">
+      <span><i class="swatch g"></i> asset generation (offline, Python)</span>
+      <span><i class="swatch r"></i> runtime (on-watch, Compose)</span>
+      <span><i class="swatch p"></i> the annoyed-mood layer</span>
+      <span><i class="swatch r dash"></i> the seam: generated PNG + manifest</span>
+    </div>
+  </header>
+
+  <!-- ============================ PHASE 1 ============================ -->
+  <section>
+    <div class="sec-head">
+      <span class="phase g">PHASE ①</span>
+      <h2>Asset generation</h2>
+    </div>
+    <p class="sec-lede">Nothing is drawn by hand. Python generators paint every sprite, icon, background and sound, then <code>generate_assets.py</code> validates the set and writes it into the app — frame-strip PNGs plus a manifest of geometry and tags.</p>
+
+    <figure>
+      <div class="fig-scroll">
+      <svg viewBox="0 0 940 300" role="img" aria-label="Asset generation pipeline: palette and generators feed an orchestrator that validates and writes PNG sheets, a manifest, and WAV files.">
+        <defs>
+          <marker id="p1a" class="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+          <marker id="p1g" class="ah g" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+        </defs>
+
+        <!-- column headers -->
+        <text class="tag" x="24" y="24">GENERATORS</text>
+        <text class="tag" x="376" y="24">ORCHESTRATOR</text>
+        <text class="tag" x="706" y="24">WRITTEN INTO THE APP</text>
+
+        <!-- Col A -->
+        <rect class="node g" x="24" y="38" width="212" height="42" rx="8"/>
+        <text class="ttl" x="38" y="58">palette.py</text>
+        <text class="sub" x="38" y="72">INK · CREAM · PINK · LCD greens…</text>
+
+        <rect class="node g" x="24" y="104" width="212" height="92" rx="8"/>
+        <text class="ttl" x="38" y="124">generate_art.py</text>
+        <text class="sub" x="38" y="141">draw_creature · features · eyes</text>
+        <text class="sub" x="38" y="157">icons · backgrounds · rugs</text>
+        <text class="sub" x="38" y="173">overlays · items · cutscenes</text>
+        <text class="tag" x="38" y="189">→ frame-strip bitmaps</text>
+
+        <rect class="node g" x="24" y="220" width="212" height="52" rx="8"/>
+        <text class="ttl" x="38" y="240">generate_sound.py</text>
+        <text class="sub" x="38" y="255">chiptune SFX + music (WAV)</text>
+
+        <!-- palette -> art -->
+        <line class="edge g dash" x1="130" y1="80" x2="130" y2="104" marker-end="url(#p1g)"/>
+        <text class="elab g" x="138" y="97">colors</text>
+
+        <!-- Col B orchestrator -->
+        <rect class="node g" x="372" y="96" width="196" height="108" rx="10" style="fill:var(--gen-soft)"/>
+        <text class="ttl" x="388" y="120">generate_assets.py</text>
+        <text class="sub" x="388" y="140">runs both generators</text>
+        <text class="sub" x="388" y="157">asserts vs the</text>
+        <text class="sub" x="388" y="172">Authoritative Generation Set</text>
+        <text class="sub" x="388" y="192" style="fill:var(--gen)">no art / code drift</text>
+
+        <!-- art & sound -> orchestrator -->
+        <path class="edge" d="M236 150 C300 150 320 150 372 150" fill="none" marker-end="url(#p1a)"/>
+        <text class="elab" x="258" y="143">frames</text>
+        <path class="edge" d="M236 246 C300 246 330 175 372 172" fill="none" marker-end="url(#p1a)"/>
+        <text class="elab" x="258" y="240">waveforms</text>
+
+        <!-- Col C outputs -->
+        <rect class="node" x="706" y="42" width="212" height="58" rx="8"/>
+        <text class="ttl" x="720" y="62">res/drawable-nodpi/</text>
+        <text class="sub" x="720" y="78">*.png — frame-strip sheets</text>
+        <text class="tag" x="720" y="93">N frames laid side by side</text>
+
+        <rect class="node r" x="706" y="118" width="212" height="60" rx="8"/>
+        <text class="ttl" x="720" y="138">assets_manifest.json</text>
+        <text class="sub" x="720" y="154">frameW · frameH · frames</text>
+        <text class="sub" x="720" y="170">tags → frame-index ranges</text>
+
+        <rect class="node" x="706" y="196" width="212" height="52" rx="8"/>
+        <text class="ttl" x="720" y="216">res/raw/</text>
+        <text class="sub" x="720" y="231">*.wav — SFX · music</text>
+
+        <!-- orchestrator -> outputs (fan) -->
+        <path class="edge g" d="M568 140 C630 120 650 78 706 72" fill="none" marker-end="url(#p1g)"/>
+        <text class="elab g" x="600" y="104">sheets</text>
+        <path class="edge g" d="M568 150 C640 150 660 150 706 148" fill="none" marker-end="url(#p1g)"/>
+        <text class="elab g" x="612" y="142">manifest</text>
+        <path class="edge g" d="M568 165 C630 190 650 222 706 222" fill="none" marker-end="url(#p1g)"/>
+        <text class="elab g" x="606" y="205">wav</text>
+      </svg>
+      </div>
+      <figcaption><b>The generators produce, the orchestrator gatekeeps.</b> <code>palette.py</code> hands a fixed set of colors to <code>generate_art.py</code>; the orchestrator runs both, refuses to write unless the output matches a declared id set, then emits the two things the app actually reads — the <b>PNG sheets</b> and the <b>manifest</b> — plus the sounds.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="fig-scroll">
+      <svg viewBox="0 0 940 320" role="img" aria-label="Inside draw_creature: nine drawing passes composite bottom to top into one frame, repeated across frames and tags to form a sprite sheet.">
+        <defs>
+          <marker id="p2a" class="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+          <marker id="p2up" class="ah g" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+        </defs>
+        <text class="tag" x="86" y="22">ONE FRAME OF draw_creature — DRAWN BOTTOM → TOP</text>
+
+        <!-- draw-order arrow -->
+        <line class="edge g" x1="66" y1="270" x2="66" y2="52" marker-end="url(#p2up)"/>
+        <text class="elab g" x="52" y="165" transform="rotate(-90 52 165)" text-anchor="middle">painter’s order</text>
+
+        <!-- 9 bands: bottom = shadow (first), top = mouth (last) -->
+        <!-- y from 250 (bottom) up by 24 -->
+        <g>
+          <rect class="node" x="92" y="250" width="228" height="20" rx="4"/><text class="ttl" x="104" y="264" style="font-size:11.5px">grounding shadow</text>
+          <rect class="node" x="92" y="226" width="228" height="20" rx="4"/><text class="ttl" x="104" y="240" style="font-size:11.5px">feet</text>
+          <rect class="node" x="92" y="202" width="228" height="20" rx="4"/><text class="ttl" x="104" y="216" style="font-size:11.5px">feature — antenna · ears · horn</text>
+          <rect class="node g" x="92" y="178" width="228" height="20" rx="4" style="fill:var(--gen-soft)"/><text class="ttl" x="104" y="192" style="font-size:11.5px">body + belly</text>
+          <rect class="node" x="92" y="154" width="228" height="20" rx="4"/><text class="ttl" x="104" y="168" style="font-size:11.5px">arms</text>
+          <rect class="node" x="92" y="130" width="228" height="20" rx="4"/><text class="ttl" x="104" y="144" style="font-size:11.5px">eyes — open · blink · happy · x</text>
+          <rect class="node" x="92" y="106" width="228" height="20" rx="4"/><text class="ttl" x="104" y="120" style="font-size:11.5px">cheeks</text>
+          <rect class="node" x="92" y="82" width="228" height="20" rx="4"/><text class="ttl" x="104" y="96" style="font-size:11.5px">mouth — smile · open · frown</text>
+        </g>
+
+        <!-- flatten arrow to composed baby -->
+        <path class="edge" d="M320 176 C360 176 372 176 402 176" marker-end="url(#p2a)"/>
+        <text class="elab" x="330" y="168">flatten</text>
+
+        <!-- composed baby thumbnail -->
+        <g transform="translate(452,176)">
+          <ellipse cx="0" cy="30" rx="30" ry="7" fill="var(--run-soft)" stroke="var(--run)" stroke-width="1.3"/>
+          <ellipse cx="0" cy="6" rx="24" ry="26" class="art-cream"/>
+          <line x1="0" y1="-20" x2="0" y2="-30" class="art-ink"/>
+          <circle cx="0" cy="-33" r="4" fill="var(--pop)"/>
+          <circle cx="-10" cy="2" r="2.6" fill="var(--ink)"/><circle cx="10" cy="2" r="2.6" fill="var(--ink)"/>
+          <path d="M-8 15 Q0 21 8 15" stroke="var(--ink)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- repeat -> strip -->
+        <path class="edge" d="M500 176 C540 176 552 176 582 176" marker-end="url(#p2a)"/>
+        <text class="elab" x="508" y="168">× frames</text>
+        <text class="elab" x="508" y="192">× tags</text>
+
+        <!-- frame strip -->
+        <g transform="translate(600,140)">
+          <rect class="node r" x="0" y="0" width="300" height="72" rx="6" fill="none"/>
+          <line x1="50" y1="0" x2="50" y2="72" stroke="var(--line)"/>
+          <line x1="100" y1="0" x2="100" y2="72" stroke="var(--line)"/>
+          <line x1="150" y1="0" x2="150" y2="72" stroke="var(--line)"/>
+          <line x1="200" y1="0" x2="200" y2="72" stroke="var(--line)"/>
+          <line x1="250" y1="0" x2="250" y2="72" stroke="var(--line)"/>
+          <g fill="var(--faint)">
+            <circle cx="25" cy="40" r="12"/><circle cx="75" cy="38" r="12"/><circle cx="125" cy="40" r="12"/>
+            <circle cx="175" cy="42" r="12"/><circle cx="225" cy="38" r="12"/><circle cx="275" cy="40" r="12"/>
+          </g>
+        </g>
+        <text class="ttl" x="600" y="232" style="font-size:12px">spr_baby.png — 49 frames wide</text>
+        <text class="tag" x="600" y="250">tags: idle · idle2–4 · happy · sick · sleep · call · eat</text>
+        <text class="tag" x="600" y="266">the manifest stores each tag’s frame-index range</text>
+      </svg>
+      </div>
+      <figcaption><b>A frame is a flattened stack; a sheet is a row of frames.</b> Each pass paints over the last, so the mouth always sits on top of the body and the body on top of the feet. The pose is baked in — an idle frame and a blink frame are just different indices in the same strip. What isn’t baked here (coat patterns, the angry face) is added live in Phase ②.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ============================ PHASE 2 ============================ -->
+  <section>
+    <div class="sec-head">
+      <span class="phase r">PHASE ②</span>
+      <h2>Runtime composition</h2>
+    </div>
+    <p class="sec-lede">On the watch, Jetpack Compose stacks eight layers back-to-front into the Home screen every frame. <code>SpriteBank</code> slices frames out of the generated sheets on demand; the pet’s live state decides which frame and which overlays each layer shows.</p>
+
+    <figure>
+      <div class="fig-scroll">
+      <svg viewBox="0 0 940 560" role="img" aria-label="The Home screen as eight stacked layers from background at the back to the status meters at the front, with the pet sprite's own modifier sub-stack called out below.">
+        <defs>
+          <marker id="p3r" class="ah r" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+          <marker id="p3a" class="ah" markerWidth="8" markerHeight="8" refX="6" refY="2.6" orient="auto"><path d="M0,0 L6,2.6 L0,5.2 Z"/></marker>
+        </defs>
+        <text class="tag" x="40" y="26">HOME SCREEN — Z-ORDER (back → front)</text>
+
+        <!-- isometric layer cake. tile: P1(ax,ay) P2(ax+SK,ay-DEP) P3(ax+SK+W,ay-DEP) P4(ax+W,ay). ax=60 W=250 SK=74 DEP=34, GAP=40, base ay=470 -->
+        <!-- i0 background (bottom) -->
+        <g class="plane">
+          <polygon class="fill-run" points="60,470 134,436 384,436 310,470" stroke="var(--run)"/>
+          <polygon class="fill-run" points="60,430 134,396 384,396 310,430" stroke="var(--run)"/>
+          <polygon class="fill-run" points="60,390 134,356 384,356 310,390" stroke="var(--run)"/>
+          <polygon points="60,350 134,316 384,316 310,350" stroke="var(--run)" style="fill:var(--run-soft)"/>
+          <polygon class="fill-run" points="60,310 134,276 384,276 310,310" stroke="var(--pop)" stroke-width="1.8"/>
+          <polygon class="fill-run" points="60,270 134,236 384,236 310,270" stroke="var(--run)"/>
+          <polygon class="fill-run" points="60,230 134,196 384,196 310,230" stroke="var(--run)"/>
+          <polygon class="fill-run" points="60,190 134,156 384,156 310,190" stroke="var(--run)"/>
+        </g>
+
+        <!-- connectors + labels (right). label y roughly tile mid = ay-17 -->
+        <!-- helper: from tile right edge (~347, ay-17) to x=470 -->
+        <g>
+          <line class="edge r" x1="360" y1="453" x2="470" y2="453" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="449">z0</text><text class="ttl" x="500" y="449">background</text>
+          <text class="sub" x="500" y="464">bg_room_day · _night · cos_bg_*</text>
+
+          <line class="edge r" x1="360" y1="413" x2="470" y2="413" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="409">z1</text><text class="ttl" x="500" y="409">ground</text>
+          <text class="sub" x="500" y="424">rug(rugId) + poop</text>
+
+          <line class="edge r" x1="360" y1="373" x2="470" y2="373" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="369">z2</text><text class="ttl" x="500" y="369">pet — PetSprite (+ coat)</text>
+          <text class="sub" x="500" y="384">own transform stack, below ↓</text>
+
+          <line class="edge r" x1="360" y1="333" x2="470" y2="333" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="329">z3</text><text class="ttl" x="500" y="329">status overlays</text>
+          <text class="sub" x="500" y="344">sick skull · zzz · call</text>
+
+          <line class="edge p" x1="360" y1="293" x2="470" y2="293" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="289">z4</text><text class="ttl" x="500" y="289" style="fill:var(--pop)">mood</text>
+          <text class="sub" x="500" y="304">content heart · or 💢 angry face</text>
+
+          <line class="edge r" x1="360" y1="253" x2="470" y2="253" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="249">z5</text><text class="ttl" x="500" y="249">tap burst</text>
+          <text class="sub" x="500" y="264">heart pops on an effective pet</text>
+
+          <line class="edge r" x1="360" y1="213" x2="470" y2="213" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="209">z6</text><text class="ttl" x="500" y="209">radial menu</text>
+          <text class="sub" x="500" y="224">hubs · capsule · submenu sheet</text>
+
+          <line class="edge r" x1="360" y1="173" x2="470" y2="173" marker-end="url(#p3r)"/>
+          <text class="zn" x="476" y="169">z7</text><text class="ttl" x="500" y="169">status meters (front)</text>
+          <text class="sub" x="500" y="184">hunger · happy · GP</text>
+        </g>
+
+        <!-- pet sub-stack row -->
+        <text class="tag" x="60" y="512">z2 · PetSprite MODIFIER STACK — outer → inner, all riding one frame</text>
+        <g font-family="var(--mono)" font-size="11">
+          <rect class="node r" x="60" y="522" width="118" height="30" rx="15"/><text class="ttl" x="119" y="541" text-anchor="middle" style="font-size:11px">drag-follow</text>
+          <rect class="node r" x="186" y="522" width="96" height="30" rx="15"/><text class="ttl" x="234" y="541" text-anchor="middle" style="font-size:11px">rotate</text>
+          <rect class="node r" x="290" y="522" width="98" height="30" rx="15"/><text class="ttl" x="339" y="541" text-anchor="middle" style="font-size:11px">stretch</text>
+          <rect class="node r" x="396" y="522" width="130" height="30" rx="15"/><text class="ttl" x="461" y="541" text-anchor="middle" style="font-size:11px">counter-rotate</text>
+          <rect class="node r" x="534" y="522" width="92" height="30" rx="15"/><text class="ttl" x="580" y="541" text-anchor="middle" style="font-size:11px">bounce</text>
+          <rect class="node p" x="634" y="522" width="150" height="30" rx="15"/><text class="ttl" x="709" y="541" text-anchor="middle" style="font-size:11px">coat · SrcAtop clip</text>
+          <g class="ah"><path d="M178 537 L186 537" stroke="var(--muted)" stroke-width="1.4"/></g>
+          <line class="edge" x1="180" y1="537" x2="185" y2="537"/>
+          <line class="edge" x1="284" y1="537" x2="289" y2="537"/>
+          <line class="edge" x1="390" y1="537" x2="395" y2="537"/>
+          <line class="edge" x1="528" y1="537" x2="533" y2="537"/>
+          <line class="edge" x1="628" y1="537" x2="633" y2="537"/>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>Eight planes, painted back to front.</b> The pet sits at <code>z2</code>, so its head can rise <em>behind</em> the meters (<code>z7</code>) instead of being clipped. The <b>mood</b> layer (<code>z4</code>) swaps the content heart for the angry face when the pet is pestered. Within <code>z2</code>, the sprite frame passes through a chain of transforms and a masked coat pass — one bitmap, six operations, so the coat stretches with the body.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="fig-scroll">
+      <svg viewBox="0 0 940 472" role="img" aria-label="Runtime data flow: CareEngine feeds the Repository, which exposes state through the ViewModel that selects screen layers, while SpriteBank bridges the generated assets and DomainEvents drive sound and haptics.">
+        <defs>
+          <marker id="p4r" class="ah r" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+          <marker id="p4a" class="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+          <marker id="p4d" class="ah r" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z"/></marker>
+        </defs>
+        <text class="tag" x="24" y="22">STATE (pure JVM)</text>
+        <text class="tag" x="356" y="22">VIEWMODEL</text>
+        <text class="tag" x="690" y="22">COMPOSE SCREEN</text>
+
+        <!-- CareEngine -->
+        <rect class="node" x="24" y="36" width="212" height="70" rx="9"/>
+        <text class="ttl" x="38" y="58">CareEngine</text>
+        <text class="sub" x="38" y="74">pure sim — advance · pet</text>
+        <text class="sub" x="38" y="90">annoy · wake · toggleLight</text>
+
+        <line class="edge" x1="130" y1="106" x2="130" y2="150" marker-end="url(#p4a)"/>
+        <text class="elab" x="138" y="132">Sim(pet, events)</text>
+
+        <!-- Repository -->
+        <rect class="node" x="24" y="150" width="212" height="86" rx="9"/>
+        <text class="ttl" x="38" y="172">Repository</text>
+        <text class="sub" x="38" y="188">single source of truth</text>
+        <text class="sub" x="38" y="204">persists · cooldown clock</text>
+        <text class="sub" x="38" y="220">force-awake window</text>
+
+        <!-- Repository -> ViewModel -->
+        <path class="edge" d="M236 190 C300 190 316 175 356 172" marker-end="url(#p4a)"/>
+        <text class="elab" x="256" y="183">StateFlows</text>
+
+        <!-- ViewModel -->
+        <rect class="node r" x="356" y="60" width="236" height="176" rx="10" style="fill:var(--run-soft)"/>
+        <text class="ttl" x="372" y="84">TamaViewModel</text>
+        <line x1="372" y1="94" x2="576" y2="94" stroke="var(--line)"/>
+        <text class="ttl" x="372" y="116" style="font-size:12px">pet</text>
+        <text class="sub" x="430" y="116">pose → frame + overlays</text>
+        <text class="ttl" x="372" y="142" style="font-size:12px">settings.rugId</text>
+        <text class="ttl" x="372" y="168" style="font-size:12px">settings.coatId</text>
+        <text class="ttl" x="372" y="194" style="font-size:12px">lastPetMs</text>
+        <text class="ttl" x="372" y="220" style="font-size:12px">annoyedUntilMs</text>
+
+        <!-- Screen -->
+        <rect class="node r" x="690" y="36" width="226" height="212" rx="10"/>
+        <text class="ttl" x="706" y="60">WearApp › HomeScreen</text>
+        <line x1="706" y1="70" x2="900" y2="70" stroke="var(--line)"/>
+        <text class="sub" x="706" y="90">selects, per layer:</text>
+        <text class="ttl" x="706" y="112" style="font-size:12px">z0–z1 background · rug</text>
+        <text class="ttl" x="706" y="136" style="font-size:12px">z2 sprite frame + coat</text>
+        <text class="ttl" x="706" y="160" style="font-size:12px">z3 sick · zzz · call</text>
+        <text class="ttl" x="706" y="184" style="font-size:12px; fill:var(--pop)">z4 heart · 💢 face</text>
+        <text class="ttl" x="706" y="208" style="font-size:12px">z6–z7 menu · meters</text>
+
+        <!-- ViewModel fields -> screen -->
+        <path class="edge r" d="M592 116 C640 116 650 122 690 124" marker-end="url(#p4r)"/>
+        <text class="elab r" x="606" y="110">pet</text>
+        <path class="edge r" d="M592 150 C636 150 650 148 690 140" marker-end="url(#p4r)"/>
+        <text class="elab r" x="600" y="164">rugId·coatId</text>
+        <path class="edge p" d="M592 194 C640 194 656 186 690 184" marker-end="url(#p4r)"/>
+        <text class="elab p" x="600" y="208">annoyedUntilMs</text>
+
+        <!-- SpriteBank bridge -->
+        <rect class="node r" x="356" y="300" width="236" height="72" rx="10"/>
+        <text class="ttl" x="372" y="324">SpriteBank</text>
+        <text class="sub" x="372" y="341">reads manifest · slices sheets</text>
+        <text class="sub" x="372" y="357">frame(id, i) → ImageBitmap</text>
+
+        <!-- generated assets chip (the seam) -->
+        <rect class="node" x="24" y="386" width="236" height="62" rx="10" style="stroke:var(--run); stroke-dasharray:5 4;"/>
+        <text class="ttl" x="38" y="408" style="fill:var(--run)">◆ generated PNG + manifest</text>
+        <text class="tag" x="38" y="425">the seam from Phase ①</text>
+        <text class="tag" x="38" y="440">drawable-nodpi · assets_manifest</text>
+
+        <path class="edge r dash" d="M260 412 C314 412 334 372 356 356" marker-end="url(#p4d)"/>
+        <text class="elab r" x="286" y="402">read</text>
+        <!-- SpriteBank -> screen -->
+        <path class="edge r" d="M592 330 C660 330 720 300 782 250" marker-end="url(#p4r)"/>
+        <text class="elab r" x="636" y="312">frames via LocalSprites</text>
+
+        <!-- Repository -> Sound/Haptics branch -->
+        <rect class="node" x="24" y="300" width="212" height="70" rx="9"/>
+        <text class="ttl" x="38" y="322">SoundBank + Haptics</text>
+        <text class="sub" x="38" y="339">events → chiptune SFX</text>
+        <text class="sub" x="38" y="355">events → wrist buzz</text>
+        <path class="edge" d="M110 236 C110 265 116 280 122 300" marker-end="url(#p4a)"/>
+        <text class="elab" x="122" y="272">DomainEvents</text>
+      </svg>
+      </div>
+      <figcaption><b>State decides content; SpriteBank supplies pixels.</b> The engine is pure and testable; the Repository is the only writer; the ViewModel exposes read-only flows that the screen watches. Four fields do most of the visible work — <code>pet</code> picks the pose, <code>rugId</code>/<code>coatId</code> dress it, <code>annoyedUntilMs</code> raises the 💢. The same <code>DomainEvents</code> that never touch the screen drive the non-visual layer: sound and haptics.</figcaption>
+    </figure>
+
+    <div class="seam">
+      <span class="k">◆</span>
+      <p style="margin:0"><b>The two phases meet at one seam.</b> Phase ① writes exactly two things the runtime reads back — the frame-strip PNGs and the manifest that indexes them. <code>SpriteBank</code> is the only bridge across it: change the art and nothing in Phase ② moves; change the manifest’s geometry and every layer that draws a sprite re-slices correctly, because no frame size is ever hard-coded.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>TamaWatch · branch tamawatchi</span>
+    <span>Galaxy Watch Ultra · 480×480 · Wear OS 5</span>
+  </footer>
+</div>
