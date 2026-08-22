@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.tamawatch.core.model.CoatStyle
 import com.tamawatch.core.model.SleepWindow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,6 +17,7 @@ data class Settings(
     val micEnabled: Boolean = false,
     val sleep: SleepWindow = SleepWindow(),
     val onboarded: Boolean = false,
+    val coat: CoatStyle = CoatStyle.NONE,
 )
 
 private val Context.dataStore by preferencesDataStore(name = "tama_settings")
@@ -27,6 +30,7 @@ class SettingsStore(private val context: Context) {
         val sleepStart = intPreferencesKey("sleep_start")
         val sleepEnd = intPreferencesKey("sleep_end")
         val onboarded = booleanPreferencesKey("onboarded")
+        val coat = stringPreferencesKey("coat_style")
     }
 
     val flow: Flow<Settings> = context.dataStore.data.map { p ->
@@ -36,6 +40,7 @@ class SettingsStore(private val context: Context) {
             micEnabled = p[Keys.mic] ?: false,
             sleep = SleepWindow(p[Keys.sleepStart] ?: 22, p[Keys.sleepEnd] ?: 8),
             onboarded = p[Keys.onboarded] ?: false,
+            coat = CoatStyle.from(p[Keys.coat]),
         )
     }
 
@@ -47,6 +52,7 @@ class SettingsStore(private val context: Context) {
                 micEnabled = prefs[Keys.mic] ?: false,
                 sleep = SleepWindow(prefs[Keys.sleepStart] ?: 22, prefs[Keys.sleepEnd] ?: 8),
                 onboarded = prefs[Keys.onboarded] ?: false,
+                coat = CoatStyle.from(prefs[Keys.coat]),
             )
             val next = block(cur)
             prefs[Keys.sound] = next.soundOn
@@ -55,6 +61,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.sleepStart] = next.sleep.startHour
             prefs[Keys.sleepEnd] = next.sleep.endHour
             prefs[Keys.onboarded] = next.onboarded
+            prefs[Keys.coat] = next.coat.id
         }
     }
 }

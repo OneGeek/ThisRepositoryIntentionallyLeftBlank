@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.tamawatch.core.data.Repository
 import com.tamawatch.core.data.Settings
 import com.tamawatch.core.data.SettingsStore
+import com.tamawatch.core.model.CoatStyle
 import com.tamawatch.core.model.DomainEvent
 import com.tamawatch.core.model.Species
 import kotlinx.coroutines.flow.SharingStarted
@@ -90,6 +91,7 @@ class TamaViewModel(
     fun setSound(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(soundOn = on) } }
     fun setReduceMotion(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(reduceMotion = on) } }
     fun setMic(on: Boolean) = viewModelScope.launch { settingsStore.update { it.copy(micEnabled = on) } }
+    fun cycleCoat() = viewModelScope.launch { settingsStore.update { it.copy(coat = CoatStyle.next(it.coat)) } }
 
     class Factory(
         private val repository: Repository,

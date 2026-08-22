@@ -8,6 +8,16 @@ A faithful homage to the **Tamagotchi Smart (2021)**, built for the **Samsung Ga
 
 Open **`preview/index.html`** in any browser. It's a fully self-contained, accelerated playable build of the core loop using the real generated art and audio — the egg hatches in seconds and evolves through Baby → Child → Teen → Adult in a couple of minutes. Click the center to act, click ring icons, scroll/←→ to spin the dial.
 
+## Customization — coat styles
+
+**Settings → Coat** cycles a decorative pattern painted over your pet:
+**None · Tiger Stripes · Leopard Spots · Triangle Spots**. The choice is saved
+in DataStore and applied to the pet on the Home screen. Rendering is a runtime
+overlay — the pattern is drawn into an offscreen layer and composited with
+`BlendMode.SrcAtop`, so it clips exactly to the creature's silhouette and works
+for every species, stage, and pose without re-baking any art. Purely cosmetic;
+it never touches the simulation.
+
 ## Build the watch APK
 
 Prerequisites: **JDK 17+** and the **Android SDK** (Android Studio, or the command-line tools). The Gradle wrapper is committed, so you do *not* need a local Gradle install.

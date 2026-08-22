@@ -49,7 +49,7 @@ fun poseFor(pet: Pet): Pair<String, String> {
 private data class RingAction(val icon: String, val label: String, val onGo: () -> Unit, val alert: Boolean = false)
 
 @Composable
-fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean) {
+fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean, coat: CoatStyle) {
     val bg = when {
         pet.stage == Stage.EGG -> "bg_egg"
         pet.asleep || !pet.lightOn -> "bg_room_night"
@@ -79,12 +79,12 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
         }
 
         // Care ring + centered pet
-        CareRing(vm, pet)
+        CareRing(vm, pet, coat)
     }
 }
 
 @Composable
-private fun CareRing(vm: TamaViewModel, pet: Pet) {
+private fun CareRing(vm: TamaViewModel, pet: Pet, coat: CoatStyle) {
     val actions = listOf(
         RingAction("ic_feed", "Feed", { vm.go(Screen.Feed) }, alert = pet.stats.hunger <= Tuning.CRIT),
         RingAction("ic_play", "Play", { vm.go(Screen.PlayMenu) }),
@@ -134,7 +134,7 @@ private fun CareRing(vm: TamaViewModel, pet: Pet) {
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                PixelSprite(id, tag, 3, Modifier.fillMaxSize())
+                PixelPetSprite(id, tag, coat, 3, Modifier.fillMaxSize())
                 if (pet.stats.dirty) PixelSprite("ov_poop", "idle", 2, Modifier.align(Alignment.BottomStart).size(22.dp))
                 if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
                 if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
@@ -237,6 +237,7 @@ fun SettingsScreen(vm: TamaViewModel, s: com.tamawatch.core.data.Settings) {
         item { Button(onClick = { vm.setSound(!s.soundOn) }, modifier = Modifier.fillMaxWidth()) { Text("Sound: ${if (s.soundOn) "On" else "Off"}") } }
         item { Button(onClick = { vm.setReduceMotion(!s.reduceMotion) }, modifier = Modifier.fillMaxWidth()) { Text("Reduce motion: ${if (s.reduceMotion) "On" else "Off"}") } }
         item { Button(onClick = { vm.setMic(!s.micEnabled) }, modifier = Modifier.fillMaxWidth()) { Text("Mic talk: ${if (s.micEnabled) "On" else "Off"}") } }
+        item { Button(onClick = { vm.cycleCoat() }, modifier = Modifier.fillMaxWidth()) { Text("Coat: ${s.coat.display}") } }
         item { Text("Sleep ${s.sleep.startHour}:00–${s.sleep.endHour}:00", style = MaterialTheme.typography.caption2) }
         item { BackButton(vm) }
     }

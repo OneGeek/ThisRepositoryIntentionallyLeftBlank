@@ -41,6 +41,23 @@ enum class Species(val stage: Stage, val spriteId: String, val display: String) 
 
 enum class CareTier { GOOD, AVERAGE, NEGLECT }
 
+/**
+ * Optional decorative coat pattern painted over the pet sprite, clipped to its
+ * silhouette. Purely cosmetic — it never touches the simulation. [id] is the
+ * stable value persisted in settings; [display] is the Settings-screen label.
+ */
+enum class CoatStyle(val id: String, val display: String) {
+    NONE("none", "None"),
+    TIGER("tiger", "Tiger Stripes"),
+    LEOPARD("leopard", "Leopard Spots"),
+    TRIANGLE("triangle", "Triangle Spots");
+
+    companion object {
+        fun from(id: String?): CoatStyle = entries.firstOrNull { it.id == id } ?: NONE
+        fun next(cur: CoatStyle): CoatStyle = entries[(cur.ordinal + 1) % entries.size]
+    }
+}
+
 /** Live vitals. Hunger/Happy/Energy are 0..100 internally; UI shows hearts. */
 data class Stats(
     val hunger: Int = 70,
