@@ -44,7 +44,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.MaterialTheme
@@ -346,10 +345,11 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
         if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
         if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
-        // Pester the pet too much and it gets annoyed: a 💢 pops over its head,
-        // outranking the content heart until the mood passes.
+        // Pester the pet too much and it gets annoyed: angry brows knit over its
+        // eyes and a 💢 pops on its forehead, outranking the content heart until the
+        // mood passes.
         if (annoyed) {
-            AngerMark()
+            AngerOverlay()
         } else if (content) {
             // Cooldown mood: a small steady heart, so it's clear the pet is content
             // and more petting won't add happiness right now.
@@ -363,19 +363,74 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
     }
 }
 
-/** The 💢 anger pop shown over the pet's head when it's been pestered too much. */
+/**
+ * The "annoyed" face: angry brows knitted over the eyes and a 💢 on the forehead.
+ * Drawn in the pet sprite's own footprint (a 2:3 cell — every creature shares it),
+ * so the marks land on the face by the sprite's known geometry (eyes at ~0.63 h,
+ * ±0.13 w). Because it's an overlay it stays put through the eye-blink frames, so
+ * the pet still reads as angry mid-blink.
+ */
 @Composable
-private fun BoxScope.AngerMark() {
+private fun BoxScope.AngerOverlay() {
     val pop = remember { Animatable(0.5f) }
-    LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 520f)) }
-    Text(
-        "💢",
-        fontSize = 22.sp,
-        modifier = Modifier
-            .align(Alignment.TopEnd)
-            .offset(x = (-2).dp, y = (-2).dp)
-            .graphicsLayer { scaleX = pop.value; scaleY = pop.value },
-    )
+    LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 520f)) }
+    val ink = Color(0xFF222034)   // matches the sprite's outline ink
+    Box(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .aspectRatio(2f / 3f)
+            .graphicsLayer {
+                scaleX = pop.value; scaleY = pop.value
+                transformOrigin = TransformOrigin(0.5f, 0.55f)
+            },
+    ) {
+        Canvas(Modifier.matchParentSize()) {
+            val w = size.width; val h = size.height
+            val cx = w * 0.5f
+            val eyeY = h * 0.627f
+            val exOff = w * 0.13f            // eye offset from centre
+            val sw = w * 0.045f
+            // Angry brows: each slants down toward the nose (inner end lower).
+            drawLine(
+                ink,
+                Offset(cx - exOff - w * 0.055f, eyeY - h * 0.05f),
+                Offset(cx - exOff + w * 0.05f, eyeY - h * 0.012f),
+                strokeWidth = sw, cap = StrokeCap.Round,
+            )
+            drawLine(
+                ink,
+                Offset(cx + exOff + w * 0.055f, eyeY - h * 0.05f),
+                Offset(cx + exOff - w * 0.05f, eyeY - h * 0.012f),
+                strokeWidth = sw, cap = StrokeCap.Round,
+            )
+            // 💢 anger vein on the forehead — a four-pointed star with concave sides
+            // (the puffy "vein pop"). Drawn (not an emoji) so it lands exactly on the
+            // forehead and renders identically on-device and in previews.
+            val red = Color(0xFFE8352A)
+            val fx = cx; val fy = h * 0.515f
+            val r = w * 0.085f              // point radius
+            val inner = r * 0.30f           // how far the sides pinch inward
+            val vein = Path()
+            fun pt(rad: Float, ang: Double) = Offset(fx + rad * cos(ang).toFloat(), fy + rad * sin(ang).toFloat())
+            for (k in 0 until 4) {
+                val a0 = -Math.PI / 2 + k * (Math.PI / 2)       // this point (start at top)
+                val a1 = a0 + Math.PI / 2                        // next point
+                val ac = a0 + Math.PI / 4                        // control, between them
+                val p0 = pt(r, a0); val c = pt(inner, ac); val p1 = pt(r, a1)
+                if (k == 0) vein.moveTo(p0.x, p0.y)
+                val steps = 6
+                for (s in 1..steps) {                            // sample the concave edge
+                    val t = s / steps.toFloat(); val mt = 1 - t
+                    val x = mt * mt * p0.x + 2 * mt * t * c.x + t * t * p1.x
+                    val y = mt * mt * p0.y + 2 * mt * t * c.y + t * t * p1.y
+                    vein.lineTo(x, y)
+                }
+            }
+            vein.close()
+            drawPath(vein, red, style = Stroke(width = w * 0.028f, cap = StrokeCap.Round))
+        }
+    }
 }
 
 /** A heart that pops up from the pet's head and fades — the "I felt that" cue. */
