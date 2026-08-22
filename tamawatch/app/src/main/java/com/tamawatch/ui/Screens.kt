@@ -25,7 +25,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -310,13 +311,25 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
                     scaleX = s; scaleY = s
                     transformOrigin = feet
                 }
-                // Coat pattern: rendered into an offscreen buffer so BlendMode.SrcAtop
-                // clips the markings to the sprite's own silhouette (transparent
-                // headroom stays clear). Innermost, so it rides every transform above.
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                // Coat pattern. Innermost, so it rides every transform above — the
+                // drag-stretch scales the markings right along with the body. The
+                // SrcAtop blend needs an isolated layer so it masks to the pet's
+                // silhouette (not the room behind); we save that layer with a wide
+                // margin rather than CompositingStrategy.Offscreen, which clips to the
+                // node bounds and lopped the feet off (they reach that edge).
                 .drawWithContent {
-                    drawContent()
-                    if (coatId != 0) drawCoat(coatId)
+                    if (coatId == 0) {
+                        drawContent()
+                    } else {
+                        val pad = 64.dp.toPx()
+                        drawContext.canvas.saveLayer(
+                            Rect(-pad, -pad, size.width + pad, size.height + pad),
+                            Paint(),
+                        )
+                        drawContent()
+                        drawCoat(coatId)
+                        drawContext.canvas.restore()
+                    }
                 },
         )
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
