@@ -58,4 +58,14 @@ object Tuning {
     // Petting only lands a happiness/bond gain once per this window; taps in
     // between still get a reaction, just no stat change (an anti-spam throttle).
     const val PET_COOLDOWN_MS = 30_000L
+    // Keep pestering a content pet — this many taps inside one cooldown — and it
+    // gets annoyed (a 💢), taking a small happy/bond dip until the mood clears.
+    const val PET_ANNOY_TAPS = 4
+    const val PET_ANNOY_MS = 3_500L
+    const val PET_ANNOY_HAPPY = 3
+    const val PET_ANNOY_BOND = 1
+
+    // Touching a sleeping pet rouses it: it stays awake this long (real ms) before
+    // it can drift back to sleep while still inside the sleep window.
+    const val WAKE_MS = 10 * 60_000L
 }

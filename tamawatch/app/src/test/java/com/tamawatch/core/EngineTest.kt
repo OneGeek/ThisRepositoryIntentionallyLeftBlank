@@ -139,6 +139,25 @@ class EngineTest {
         assertFalse((throttled.events.first() as DomainEvent.Petted).effective)
     }
 
+    @Test fun annoyDipsHappyAndBondAndSignals() {
+        val p = baby().copy(stats = Stats(happy = 50, bond = 40))
+        val s = CareEngine.annoy(p, 0)
+        assertEquals(50 - Tuning.PET_ANNOY_HAPPY, s.pet.stats.happy)
+        assertEquals(40 - Tuning.PET_ANNOY_BOND, s.pet.stats.bond)
+        assertTrue(s.events.any { it is DomainEvent.Annoyed })
+    }
+
+    @Test fun forceAwakeKeepsPetAwakeInsideSleepWindow() {
+        val p = baby().copy(stats = Stats(energy = 50, hunger = 80, happy = 80), asleep = true, lastUpdatedMs = 0)
+        // Baseline: inside the sleep window the pet sleeps.
+        val slept = CareEngine.advance(p, 5 * min, hourAt = night, rng = seed()).pet
+        assertTrue(slept.asleep)
+        // Rousing it (force-awake past the whole span) keeps it up despite the window.
+        val roused = CareEngine.advance(p, 5 * min, hourAt = night, rng = seed(), forceAwakeUntilMs = 6 * min)
+        assertFalse(roused.pet.asleep)
+        assertTrue(roused.events.any { it is DomainEvent.WokeUp })
+    }
+
     @Test fun healingIsGentleWithMedicineButCostsBondAsHomeRemedy() {
         val sick = baby().copy(stats = Stats(sick = true, bond = 40))
         val gentle = CareEngine.heal(sick, 0, gentle = true)

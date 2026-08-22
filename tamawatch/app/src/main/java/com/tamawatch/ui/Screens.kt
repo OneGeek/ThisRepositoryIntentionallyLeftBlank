@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.MaterialTheme
@@ -185,6 +186,7 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
     val (id, tag) = poseFor(pet)
     val reduce = LocalReduceMotion.current
     val lastPetMs by vm.lastPetMs.collectAsStateWithLifecycle()
+    val annoyedUntilMs by vm.annoyedUntilMs.collectAsStateWithLifecycle()
 
     // Wall-clock ticker: only runs while a cooldown is active so the "content"
     // state clears itself. Never shown as a number — it just gates the mood cue.
@@ -196,7 +198,9 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
         }
         now = System.currentTimeMillis()
     }
-    val content = pet.alive && !pet.asleep && now - lastPetMs < Tuning.PET_COOLDOWN_MS
+    // Over-petting mood takes precedence over the content heart while it lasts.
+    val annoyed = pet.alive && !pet.asleep && now < annoyedUntilMs
+    val content = pet.alive && !pet.asleep && !annoyed && now - lastPetMs < Tuning.PET_COOLDOWN_MS
 
     // One-shot tap reaction: a squash-and-stretch bounce, bigger when it counts.
     var reactKey by remember { mutableIntStateOf(0) }
@@ -269,10 +273,17 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
                                         live = value
                                     }
                                 }
-                            } else {
-                                reactEffective = System.currentTimeMillis() - lastPetMs >= Tuning.PET_COOLDOWN_MS
-                                reactKey++
-                                vm.petIt()
+                            }
+                            when {
+                                // Touching a sleeping pet wakes it (no fuss/happiness).
+                                pet.asleep -> vm.wake()
+                                // A drag is a fuss too — it makes the pet happy like a tap.
+                                dragging -> vm.petIt()
+                                else -> {
+                                    reactEffective = System.currentTimeMillis() - lastPetMs >= Tuning.PET_COOLDOWN_MS
+                                    reactKey++
+                                    vm.petIt()
+                                }
                             }
                             break
                         }
@@ -335,9 +346,13 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
         if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
         if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
-        // Cooldown mood: a small steady heart, so it's clear the pet is content and
-        // more petting won't add happiness right now.
-        if (content) {
+        // Pester the pet too much and it gets annoyed: a 💢 pops over its head,
+        // outranking the content heart until the mood passes.
+        if (annoyed) {
+            AngerMark()
+        } else if (content) {
+            // Cooldown mood: a small steady heart, so it's clear the pet is content
+            // and more petting won't add happiness right now.
             PixelSprite(
                 "ov_heart_particle", "rise", 2,
                 Modifier.align(Alignment.TopCenter).offset(y = 2.dp).size(18.dp).alpha(0.7f),
@@ -346,6 +361,21 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
         // The tap burst: a heart that springs up and fades on an effective pet.
         PetTapBurst(reactKey, reactEffective && !reduce)
     }
+}
+
+/** The 💢 anger pop shown over the pet's head when it's been pestered too much. */
+@Composable
+private fun BoxScope.AngerMark() {
+    val pop = remember { Animatable(0.5f) }
+    LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.38f, stiffness = 520f)) }
+    Text(
+        "💢",
+        fontSize = 22.sp,
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .offset(x = (-2).dp, y = (-2).dp)
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value },
+    )
 }
 
 /** A heart that pops up from the pet's head and fades — the "I felt that" cue. */
@@ -694,12 +724,12 @@ private fun DrawScope.triangleCoat() {
 private val HelpEntries = listOf(
     Triple("ic_hunger", "Hunger", "Meat shanks show how fed your pet is — refill it by feeding."),
     Triple("ic_mood", "Happy", "Smileys show your pet's mood — raise it by playing and petting."),
-    Triple("ov_heart_particle", "Pet", "Tap your pet to give it a fuss — it perks up and gains a little happiness. A small heart means it's content for a bit."),
+    Triple("ov_heart_particle", "Pet", "Tap or drag your pet to fuss it — it perks up and gains a little happiness. A small heart means it's content for a bit; pester it too much and it gets annoyed (💢). Tap it while it's asleep to wake it."),
     Triple("ic_feed", "Feed", "Open the food menu to feed a meal or snack."),
     Triple("ic_play", "Play", "Play a mini-game to raise happiness and earn Gotchi Points."),
     Triple("ic_bathroom", "Clean", "Flush away poop so your pet doesn't get sick."),
     Triple("ic_medicine", "Medicine", "Cures sickness. The free home remedy always works but your pet dislikes it (small bond hit). A Medicine from the Shop is a gentle cure — no bond loss."),
-    Triple("ic_light", "Lights", "Turn the room light off so a sleepy pet can rest."),
+    Triple("ic_light", "Lights", "Toggle the room light. Turn it off so a sleepy pet can rest; the same button turns it back on."),
     Triple("ic_status", "Status", "See detailed hunger, happy, energy, bond and discipline."),
     Triple("ic_shop", "Shop", "Spend Gotchi Points on food, medicine and backgrounds."),
     Triple("ic_steps", "Steps", "Your real steps become Gotchi Points each day."),

@@ -43,8 +43,21 @@ class Repository(
     private val _lastPetMs = MutableStateFlow(0L)
     val lastPetMs: StateFlow<Long> = _lastPetMs.asStateFlow()
 
+    // Wall-clock until which an annoyed pet shows its 💢 mood (set when it's been
+    // pestered too much). Non-persisted, like the pet cooldown above.
+    private val _annoyedUntilMs = MutableStateFlow(0L)
+    val annoyedUntilMs: StateFlow<Long> = _annoyedUntilMs.asStateFlow()
+    private var petSpamCount = 0
+
+    // Wall-clock until which a hand-woken pet is forced awake, so touching it while
+    // it sleeps rouses it instead of it re-sleeping on the next tick. Non-persisted.
+    private var wakeUntilMs: Long? = null
+
     private var sleep: SleepWindow = SleepWindow()
     fun setSleepWindow(w: SleepWindow) { sleep = w }
+
+    private fun advanceNow(p: Pet, now: Long): Sim =
+        CareEngine.advance(p, now, sleep, ::hourAt, forceAwakeUntilMs = wakeUntilMs)
 
     private fun hourAt(ms: Long): Int =
         Instant.ofEpochMilli(ms).atZone(zone).hour
@@ -69,7 +82,7 @@ class Repository(
     /** Advance the world to now and persist. Safe to call on open, on tick, from the tile. */
     suspend fun tick(now: Long = clock()) = mutex.withLock {
         val p = _pet.value ?: return@withLock
-        val sim = CareEngine.advance(p, now, sleep, ::hourAt)
+        val sim = advanceNow(p, now)
         persist(sim.pet)
         emitAll(sim.events)
     }
@@ -78,7 +91,7 @@ class Repository(
         val now = clock()
         val cur = _pet.value ?: return@withLock
         // fold in elapsed time first so actions act on a fresh state
-        val advanced = CareEngine.advance(cur, now, sleep, ::hourAt)
+        val advanced = advanceNow(cur, now)
         val sim = op(advanced.pet, now)
         persist(sim.pet)
         emitAll(advanced.events + sim.events)
@@ -104,10 +117,47 @@ class Repository(
         apply { p, now -> CareEngine.heal(p, now, gentle) }
         if (gentle) consume("item_medicine")
     }
+    /**
+     * A tap or drag on the pet. Off cooldown it's an effective fuss (happy/bond up)
+     * and the spam counter resets. On cooldown it's throttled; keep pestering past
+     * [Tuning.PET_ANNOY_TAPS] and the pet gets annoyed (a 💢 + a small happy/bond
+     * dip) instead of another gentle pat.
+     */
     suspend fun petIt() = apply { p, now ->
         val effective = now - _lastPetMs.value >= Tuning.PET_COOLDOWN_MS
-        if (effective) _lastPetMs.value = now
-        CareEngine.pet(p, now, effective)
+        if (effective) {
+            _lastPetMs.value = now
+            petSpamCount = 0
+            CareEngine.pet(p, now, effective = true)
+        } else {
+            petSpamCount += 1
+            if (petSpamCount >= Tuning.PET_ANNOY_TAPS) {
+                petSpamCount = 0
+                _lastPetMs.value = now                       // stay "content" (no timer shown)
+                _annoyedUntilMs.value = now + Tuning.PET_ANNOY_MS
+                CareEngine.annoy(p, now)
+            } else {
+                CareEngine.pet(p, now, effective = false)
+            }
+        }
+    }
+
+    /** Touch-to-wake: rouse a sleeping pet and hold it awake for a beat. */
+    suspend fun wake() = mutex.withLock {
+        val cur = _pet.value ?: return@withLock
+        if (!cur.alive || !cur.asleep) return@withLock
+        val now = clock()
+        wakeUntilMs = now + Tuning.WAKE_MS
+        val advanced = advanceNow(cur, now)
+        // If under a minute elapsed the advance loop runs zero steps and won't flip
+        // asleep, so force it awake here and announce the wake ourselves.
+        if (advanced.pet.asleep) {
+            persist(advanced.pet.copy(asleep = false, lastUpdatedMs = now))
+            emitAll(advanced.events + DomainEvent.WokeUp)
+        } else {
+            persist(advanced.pet)                            // advance already woke it
+            emitAll(advanced.events)
+        }
     }
     suspend fun scold() = apply { p, now -> CareEngine.scold(p, now) }
     suspend fun toggleLight() = apply { p, now -> CareEngine.toggleLight(p, now) }
@@ -122,7 +172,7 @@ class Repository(
     suspend fun onStepTotal(rawTotal: Long) = mutex.withLock {
         val now = clock()
         val cur = _pet.value ?: return@withLock
-        val advanced = CareEngine.advance(cur, now, sleep, ::hourAt)
+        val advanced = advanceNow(cur, now)
         val sim = EconomyEngine.applySteps(advanced.pet, rawTotal, epochDay(now), now)
         persist(sim.pet)
         emitAll(advanced.events + sim.events)
@@ -182,7 +232,7 @@ class Repository(
         if (cur.stage != Stage.EGG) return@withLock
         val now = clock()
         val aged = cur.copy(stageStartMs = now - Tuning.EGG_MS - 1)
-        val sim = CareEngine.advance(aged, now, sleep, ::hourAt)
+        val sim = advanceNow(aged, now)
         persist(sim.pet)
         emitAll(sim.events)
     }

@@ -132,6 +132,7 @@ sealed interface DomainEvent {
     data object Cleaned : DomainEvent
     data class Healed(val gentle: Boolean) : DomainEvent
     data class Petted(val effective: Boolean) : DomainEvent
+    data object Annoyed : DomainEvent
     data class Scolded(val correct: Boolean) : DomainEvent
     data class EarnedGp(val amount: Int) : DomainEvent
     data object StepGoal : DomainEvent

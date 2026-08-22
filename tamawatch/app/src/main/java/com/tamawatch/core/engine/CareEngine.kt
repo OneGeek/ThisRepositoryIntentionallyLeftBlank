@@ -16,13 +16,19 @@ object CareEngine {
 
     private fun Int.clamp() = coerceIn(0, Stats.MAX)
 
-    /** Advance the world to [nowMs]. [hourAt] maps a timestamp to local hour-of-day. */
+    /**
+     * Advance the world to [nowMs]. [hourAt] maps a timestamp to local hour-of-day.
+     * [forceAwakeUntilMs], when set, keeps the pet awake for any minute before that
+     * timestamp even inside the sleep window — this is how "touch to wake" holds the
+     * pet awake for a beat instead of it re-sleeping on the very next tick.
+     */
     fun advance(
         pet: Pet,
         nowMs: Long,
         window: SleepWindow = SleepWindow(),
         hourAt: (Long) -> Int,
         rng: Random = Random.Default,
+        forceAwakeUntilMs: Long? = null,
     ): Sim {
         if (!pet.alive || pet.stage == Stage.FAREWELL) {
             return Sim(pet.copy(lastUpdatedMs = nowMs))
@@ -43,7 +49,8 @@ object CareEngine {
             for (i in 0 until steps) {
                 cursor += 60_000L
                 val hour = hourAt(cursor)
-                val asleepNow = window.contains(hour)
+                val roused = forceAwakeUntilMs != null && cursor < forceAwakeUntilMs
+                val asleepNow = window.contains(hour) && !roused
                 if (asleepNow != p.asleep) {
                     p = p.copy(asleep = asleepNow)
                     events += if (asleepNow) DomainEvent.SleepStarted else DomainEvent.WokeUp
@@ -189,6 +196,20 @@ object CareEngine {
         else
             s
         return Sim(pet.copy(stats = stats, lastUpdatedMs = nowMs), listOf(DomainEvent.Petted(effective)))
+    }
+
+    /**
+     * The pet has been pestered past its patience (too many taps while already
+     * content): it gets annoyed, taking a small happy/bond dip. Signals a [💢] mood
+     * to the UI via [DomainEvent.Annoyed].
+     */
+    fun annoy(pet: Pet, nowMs: Long): Sim {
+        val s = pet.stats
+        val stats = s.copy(
+            happy = (s.happy - Tuning.PET_ANNOY_HAPPY).clamp(),
+            bond = (s.bond - Tuning.PET_ANNOY_BOND).clamp(),
+        )
+        return Sim(pet.copy(stats = stats, lastUpdatedMs = nowMs), listOf(DomainEvent.Annoyed))
     }
 
     /** Discipline is "correct" only when the pet has no real unmet need. */

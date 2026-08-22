@@ -33,6 +33,7 @@ class TamaViewModel(
     val pet = repository.pet
     val inventory = repository.inventory
     val lastPetMs = repository.lastPetMs
+    val annoyedUntilMs = repository.annoyedUntilMs
     val settings: StateFlow<Settings> = settingsStore.flow
         .stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
 
@@ -75,6 +76,7 @@ class TamaViewModel(
     fun clean() = viewModelScope.launch { repository.clean() }
     fun heal() = viewModelScope.launch { repository.heal() }
     fun petIt() = viewModelScope.launch { repository.petIt() }
+    fun wake() = viewModelScope.launch { repository.wake() }
     fun scold() = viewModelScope.launch { repository.scold() }
     fun toggleLight() = viewModelScope.launch { repository.toggleLight() }
     fun finishGame(score: Int) = viewModelScope.launch { repository.finishGame(score); home() }
