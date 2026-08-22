@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -52,6 +53,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tamawatch.assets.PartRig
 import com.tamawatch.core.model.*
 import com.tamawatch.ui.common.*
 import kotlinx.coroutines.delay
@@ -183,6 +185,10 @@ private fun BoxScope.TopStatus(pet: Pet) {
 @Composable
 private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: Int) {
     val (id, tag) = poseFor(pet)
+    // The interactive idle pose is drawn from its part rig (body deforms; face,
+    // arms, feature merely shift; shadow slides horizontally). Other poses keep
+    // their richer baked-frame animation and the whole-bitmap stretch.
+    val rig = if (tag == "idle") LocalSprites.current.parts(id) else null
     val reduce = LocalReduceMotion.current
     val lastPetMs by vm.lastPetMs.collectAsStateWithLifecycle()
     val annoyedUntilMs by vm.annoyedUntilMs.collectAsStateWithLifecycle()
@@ -292,56 +298,56 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
         contentAlignment = Alignment.BottomCenter,
     ) {
         // Feet pinned to the bottom of this (raised) box; headroom overflows up.
-        // Transform stack (outer→inner): grab-follow translation, then a directional
-        // stretch (rotate to the drag axis, scale, rotate back), then the tap bounce.
-        PetSprite(
-            id, tag, 3,
-            Modifier
-                .align(Alignment.BottomCenter)
-                .graphicsLayer {
-                    translationX = live.x * PET_DRAG_FOLLOW
-                    translationY = live.y * PET_DRAG_FOLLOW
-                }
-                .graphicsLayer {
-                    rotationZ = dragAngleDeg(live.x, live.y)
-                    transformOrigin = feet
-                }
-                .graphicsLayer {
-                    val amt = dragStretch(live.x, live.y, maxDragPx)
-                    scaleX = 1f + amt
-                    scaleY = 1f - amt * 0.55f
-                    transformOrigin = feet
-                }
-                .graphicsLayer {
-                    rotationZ = -dragAngleDeg(live.x, live.y)
-                    transformOrigin = feet
-                }
-                .graphicsLayer {
-                    val s = if (reduce) 1f else bounce.value
-                    scaleX = s; scaleY = s
-                    transformOrigin = feet
-                }
-                // Coat pattern. Innermost, so it rides every transform above — the
-                // drag-stretch scales the markings right along with the body. The
-                // SrcAtop blend needs an isolated layer so it masks to the pet's
-                // silhouette (not the room behind); we save that layer with a wide
-                // margin rather than CompositingStrategy.Offscreen, which clips to the
-                // node bounds and lopped the feet off (they reach that edge).
-                .drawWithContent {
-                    if (coatId == 0) {
-                        drawContent()
-                    } else {
-                        val pad = 64.dp.toPx()
-                        drawContext.canvas.saveLayer(
-                            Rect(-pad, -pad, size.width + pad, size.height + pad),
-                            Paint(),
-                        )
-                        drawContent()
-                        drawCoat(coatId)
-                        drawContext.canvas.restore()
+        if (rig != null) {
+            // Part-composited idle pet: per-part stretch + horizontal-only shadow.
+            RiggedPet(rig, coatId, live, maxDragPx, if (reduce) 1f else bounce.value, reduce)
+        } else {
+            // Baked-frame path. Transform stack (outer→inner): grab-follow translation,
+            // a directional stretch (rotate to the drag axis, scale, rotate back), the
+            // tap bounce, then the coat clipped to the whole silhouette.
+            PetSprite(
+                id, tag, 3,
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        translationX = live.x * PET_DRAG_FOLLOW
+                        translationY = live.y * PET_DRAG_FOLLOW
                     }
-                },
-        )
+                    .graphicsLayer {
+                        rotationZ = dragAngleDeg(live.x, live.y)
+                        transformOrigin = feet
+                    }
+                    .graphicsLayer {
+                        val amt = dragStretch(live.x, live.y, maxDragPx)
+                        scaleX = 1f + amt
+                        scaleY = 1f - amt * 0.55f
+                        transformOrigin = feet
+                    }
+                    .graphicsLayer {
+                        rotationZ = -dragAngleDeg(live.x, live.y)
+                        transformOrigin = feet
+                    }
+                    .graphicsLayer {
+                        val s = if (reduce) 1f else bounce.value
+                        scaleX = s; scaleY = s
+                        transformOrigin = feet
+                    }
+                    .drawWithContent {
+                        if (coatId == 0) {
+                            drawContent()
+                        } else {
+                            val pad = 64.dp.toPx()
+                            drawContext.canvas.saveLayer(
+                                Rect(-pad, -pad, size.width + pad, size.height + pad),
+                                Paint(),
+                            )
+                            drawContent()
+                            drawCoat(coatId)
+                            drawContext.canvas.restore()
+                        }
+                    },
+            )
+        }
         if (pet.stats.sick) PixelSprite("ov_sick_skull", "blink", 3, Modifier.align(Alignment.TopEnd).size(18.dp))
         if (pet.asleep) PixelSprite("ov_zzz", "idle", 2, Modifier.align(Alignment.TopEnd).size(22.dp))
         if (pet.needsAttention() && !pet.asleep) PixelSprite("ov_call", "blink", 3, Modifier.align(Alignment.TopEnd).size(16.dp))
@@ -349,7 +355,7 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
         // eyes and a 💢 pops on its forehead, outranking the content heart until the
         // mood passes.
         if (annoyed) {
-            AngerOverlay()
+            AngerOverlay(rig?.anchor("face")?.y ?: 0.627f)
         } else if (content) {
             // Cooldown mood: a small steady heart, so it's clear the pet is content
             // and more petting won't add happiness right now.
@@ -363,6 +369,147 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
     }
 }
 
+private const val PET_SHADOW_FOLLOW = 0.28f   // how far the cast shadow slides with a horizontal drag
+
+/** Angle of the drag vector in radians (0 when there's essentially no drag). */
+private fun dragAngleRad(x: Float, y: Float): Float {
+    val m = kotlin.math.hypot(x, y)
+    return if (m > 0.5f) kotlin.math.atan2(y, x) else 0f
+}
+
+/**
+ * The displacement to translate a part by so it *rides* the body's directional
+ * stretch while keeping its own shape: the body's R(θ)·S·R(−θ) about the feet
+ * pivot, applied to the part's anchor, minus the anchor. All in px.
+ */
+private fun stretchDelta(anchor: Offset, pivot: Offset, angle: Float, amt: Float): Offset {
+    val vx = anchor.x - pivot.x
+    val vy = anchor.y - pivot.y
+    val c = cos(-angle); val s = sin(-angle)
+    val rx = vx * c - vy * s
+    val ry = vx * s + vy * c
+    val sxp = rx * (1f + amt)
+    val syp = ry * (1f - amt * 0.55f)
+    val c2 = cos(angle); val s2 = sin(angle)
+    val bx = sxp * c2 - syp * s2
+    val by = sxp * s2 + syp * c2
+    return Offset(bx - vx, by - vy)
+}
+
+/** An accessory pinned to a rig slot anchor (e.g. "headTop", "handR"), riding the
+ *  body's stretch shift. The building block for hats / held-item customization. */
+data class RigAttachment(val anchor: String, val content: @Composable () -> Unit)
+
+/**
+ * The home pet, composited from its rig parts instead of a single flat frame, so a
+ * drag can deform the body (and its coat) while merely *shifting* the face, arms and
+ * feature — keeping their shape — and sliding the shadow horizontally only, like a
+ * real cast shadow. Layers back→front: shadow · feature · body(+coat) · arms · face.
+ * The container carries the whole-pet drag-follow + tap bounce; per-part transforms
+ * ride on top. A slow breath + occasional blink keep it alive (unless reduce-motion).
+ * Anchors come from the manifest, so no face geometry is hard-coded here.
+ */
+@Composable
+private fun BoxScope.RiggedPet(
+    rig: PartRig,
+    coatId: Int,
+    live: Offset,
+    maxDragPx: Float,
+    bounce: Float,
+    reduce: Boolean,
+    attachments: List<RigAttachment> = emptyList(),
+) {
+    val feetA = rig.anchor("feet")
+    val feetOrigin = TransformOrigin(feetA.x, feetA.y)
+
+    val breath = remember { Animatable(0f) }
+    var blink by remember { mutableStateOf(false) }
+    LaunchedEffect(reduce) {
+        if (reduce) { breath.snapTo(0f); blink = false; return@LaunchedEffect }
+        launch { while (true) { breath.animateTo(1f, tween(1900)); breath.animateTo(0f, tween(1900)) } }
+        while (true) { delay(3200); blink = true; delay(120); blink = false }
+    }
+    val breatheY = if (reduce) 0f else 0.02f * sin(breath.value * Math.PI.toFloat())
+
+    BoxWithConstraints(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .aspectRatio(2f / 3f)
+            .graphicsLayer {                       // whole-pet: drag-follow + tap bounce
+                translationX = live.x * PET_DRAG_FOLLOW
+                translationY = live.y * PET_DRAG_FOLLOW
+                scaleX = bounce; scaleY = bounce
+                transformOrigin = feetOrigin
+            },
+    ) {
+        val w = constraints.maxWidth.toFloat()
+        val h = constraints.maxHeight.toFloat()
+        val pivot = Offset(feetA.x * w, feetA.y * h)
+        val angle = if (reduce) 0f else dragAngleRad(live.x, live.y)
+        val angleDeg = Math.toDegrees(angle.toDouble()).toFloat()
+        val amt = if (reduce) 0f else dragStretch(live.x, live.y, maxDragPx)
+        fun shift(name: String): Offset {
+            val a = rig.anchor(name)
+            return stretchDelta(Offset(a.x * w, a.y * h), pivot, angle, amt)
+        }
+
+        // shadow — slides horizontally only; never squashes with the body
+        val shadowDx = if (reduce) 0f else live.x * PET_SHADOW_FOLLOW
+        PixelFrame(rig.shadow, 0, Modifier.matchParentSize().graphicsLayer { translationX = shadowDx })
+
+        // feature (behind the body) — shift, keep shape
+        val fd = shift("feature")
+        PixelFrame(rig.feature, 0, Modifier.matchParentSize().graphicsLayer { translationX = fd.x; translationY = fd.y })
+
+        // body (+ coat) — the deformable mass
+        PixelFrame(
+            rig.body, 0,
+            Modifier.matchParentSize()
+                .graphicsLayer { rotationZ = angleDeg; transformOrigin = feetOrigin }
+                .graphicsLayer {
+                    scaleX = 1f + amt
+                    scaleY = (1f - amt * 0.55f) + breatheY
+                    transformOrigin = feetOrigin
+                }
+                .graphicsLayer { rotationZ = -angleDeg; transformOrigin = feetOrigin }
+                .drawWithContent {
+                    if (coatId == 0) {
+                        drawContent()
+                    } else {
+                        val pad = 64.dp.toPx()
+                        drawContext.canvas.saveLayer(Rect(-pad, -pad, size.width + pad, size.height + pad), Paint())
+                        drawContent()
+                        drawCoat(coatId)
+                        drawContext.canvas.restore()
+                    }
+                },
+        )
+
+        // arms (hands) — shift, keep shape
+        val ad = shift("arms")
+        PixelFrame(rig.arms, 0, Modifier.matchParentSize().graphicsLayer { translationX = ad.x; translationY = ad.y })
+
+        // face — shift, keep shape; swap to the blink face on the idle blink
+        val fc = shift("face")
+        PixelFrame(
+            if (blink) rig.faceBlink else rig.face, 0,
+            Modifier.matchParentSize().graphicsLayer { translationX = fc.x; translationY = fc.y },
+        )
+
+        // accessories parented to a slot anchor: centered on the (shifted) anchor
+        attachments.forEach { at ->
+            val a = rig.anchor(at.anchor)
+            val d = shift(at.anchor)
+            Box(
+                Modifier
+                    .align(BiasAlignment(a.x * 2f - 1f, a.y * 2f - 1f))
+                    .graphicsLayer { translationX = d.x; translationY = d.y },
+            ) { at.content() }
+        }
+    }
+}
+
 /**
  * The "annoyed" face: angry brows knitted over the eyes and a 💢 on the forehead.
  * Drawn in the pet sprite's own footprint (a 2:3 cell — every creature shares it),
@@ -371,7 +518,7 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
  * the pet still reads as angry mid-blink.
  */
 @Composable
-private fun BoxScope.AngerOverlay() {
+private fun BoxScope.AngerOverlay(faceY: Float) {
     val pop = remember { Animatable(0.5f) }
     LaunchedEffect(Unit) { pop.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 520f)) }
     val ink = Color(0xFF222034)   // matches the sprite's outline ink
@@ -388,7 +535,7 @@ private fun BoxScope.AngerOverlay() {
         Canvas(Modifier.matchParentSize()) {
             val w = size.width; val h = size.height
             val cx = w * 0.5f
-            val eyeY = h * 0.627f
+            val eyeY = h * faceY            // eye line, from the rig's face anchor
             val exOff = w * 0.13f            // eye offset from centre
             val sw = w * 0.045f
             // Angry brows: each slants down toward the nose (inner end lower).
@@ -408,7 +555,7 @@ private fun BoxScope.AngerOverlay() {
             // (the puffy "vein pop"). Drawn (not an emoji) so it lands exactly on the
             // forehead and renders identically on-device and in previews.
             val red = Color(0xFFE8352A)
-            val fx = cx; val fy = h * 0.515f
+            val fx = cx; val fy = h * (faceY - 0.124f)   // forehead, just above the eyes
             val r = w * 0.085f              // point radius
             val inner = r * 0.30f           // how far the sides pinch inward
             val vein = Path()

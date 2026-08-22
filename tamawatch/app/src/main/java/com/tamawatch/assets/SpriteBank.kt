@@ -3,6 +3,7 @@ package com.tamawatch.assets
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import org.json.JSONObject
@@ -17,19 +18,40 @@ data class SpriteInfo(
 )
 
 /**
+ * A creature's runtime rig: the ids of its separately-composited part layers plus
+ * their attach anchors (normalized 0..1 of the sprite cell). Lets the renderer
+ * deform the body while merely shifting the face/arms/feature, and slide the
+ * shadow horizontally. Anchors are authored once by generate_parts.py, so the
+ * runtime never hard-codes face geometry.
+ */
+data class PartRig(
+    val shadow: String,
+    val feature: String,
+    val body: String,
+    val arms: String,
+    val face: String,
+    val faceBlink: String,
+    val anchors: Map<String, Offset>,
+) {
+    fun anchor(name: String): Offset = anchors[name] ?: Offset(0.5f, 0.5f)
+}
+
+/**
  * Loads generated pixel-art frame-strips using the manifest so frame geometry
  * is never hard-coded (closes the art/code drift risk, impl-plan §4/§10).
  * Frames are sliced lazily and cached.
  */
 class SpriteBank(private val context: Context) {
+    private val root: JSONObject = JSONObject(
+        context.assets.open("tamawatch/assets_manifest.json").bufferedReader().use { it.readText() }
+    )
     private val info: Map<String, SpriteInfo> = loadManifest()
+    private val rigs: Map<String, PartRig> = loadParts()
     private val sheetCache = HashMap<String, Bitmap>()
     private val frameCache = HashMap<String, ImageBitmap>()
 
     private fun loadManifest(): Map<String, SpriteInfo> {
-        val json = context.assets.open("tamawatch/assets_manifest.json")
-            .bufferedReader().use { it.readText() }
-        val sprites = JSONObject(json).getJSONObject("sprites")
+        val sprites = root.getJSONObject("sprites")
         val out = HashMap<String, SpriteInfo>()
         for (id in sprites.keys()) {
             val o = sprites.getJSONObject(id)
@@ -45,6 +67,30 @@ class SpriteBank(private val context: Context) {
         }
         return out
     }
+
+    private fun loadParts(): Map<String, PartRig> {
+        val parts = root.optJSONObject("parts") ?: return emptyMap()
+        val out = HashMap<String, PartRig>()
+        for (id in parts.keys()) {
+            val o = parts.getJSONObject(id)
+            val anchorsObj = o.getJSONObject("anchors")
+            val anchors = HashMap<String, Offset>()
+            for (k in anchorsObj.keys()) {
+                val a = anchorsObj.getJSONArray(k)
+                anchors[k] = Offset(a.getDouble(0).toFloat(), a.getDouble(1).toFloat())
+            }
+            out[id] = PartRig(
+                shadow = o.getString("shadow"), feature = o.getString("feature"),
+                body = o.getString("body"), arms = o.getString("arms"),
+                face = o.getString("face"), faceBlink = o.getString("faceBlink"),
+                anchors = anchors,
+            )
+        }
+        return out
+    }
+
+    /** The part rig for a creature sprite id (e.g. "spr_baby"), or null if unrigged. */
+    fun parts(id: String): PartRig? = rigs[id]
 
     fun info(id: String): SpriteInfo? = info[id]
 
