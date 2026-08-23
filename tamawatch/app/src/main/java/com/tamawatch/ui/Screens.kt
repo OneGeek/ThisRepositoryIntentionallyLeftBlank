@@ -446,16 +446,19 @@ internal fun BoxScope.RiggedPet(
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
         val pivot = Offset(feetA.x * w, feetA.y * h)
-        val angle = if (reduce) 0f else dragAngleRad(live.x, live.y)
+        // The drag deform is direct manipulation of the finger, not autonomous
+        // motion, so it is driven purely by `live` — not gated on reduce-motion
+        // (which in the app already suppresses the drag by keeping live at zero).
+        val angle = dragAngleRad(live.x, live.y)
         val angleDeg = Math.toDegrees(angle.toDouble()).toFloat()
-        val amt = if (reduce) 0f else dragStretch(live.x, live.y, maxDragPx)
+        val amt = dragStretch(live.x, live.y, maxDragPx)
         fun shift(name: String): Offset {
             val a = rig.anchor(name)
             return stretchDelta(Offset(a.x * w, a.y * h), pivot, angle, amt)
         }
 
         // shadow — slides horizontally only; never squashes with the body
-        val shadowDx = if (reduce) 0f else live.x * PET_SHADOW_FOLLOW
+        val shadowDx = live.x * PET_SHADOW_FOLLOW
         PixelFrame(rig.shadow, 0, Modifier.matchParentSize().graphicsLayer { translationX = shadowDx })
 
         // feature (behind the body) — shift, keep shape
