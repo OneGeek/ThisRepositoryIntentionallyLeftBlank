@@ -23,6 +23,10 @@ class AttentionNotifier(private val context: Context) {
         nm.createNotificationChannel(ch)
     }
 
+    /** Drop the notification unconditionally — used while the app is on-screen, so
+     *  the pet itself stands in for the alert and nothing re-buzzes on open. */
+    fun clear() = nm.cancel(ID)
+
     fun refresh(pet: Pet) {
         if (!pet.needsAttention()) {
             nm.cancel(ID)

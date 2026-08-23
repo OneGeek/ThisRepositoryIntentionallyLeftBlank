@@ -46,12 +46,6 @@ class TamaActivity : ComponentActivity() {
                 }
             }
 
-            // Keep the attention notification in step with the live pet state, so it
-            // clears the instant a need is met (not just on the next background tick).
-            LaunchedEffect(Unit) {
-                vm.pet.collect { p -> p?.let { c.attentionNotifier.refresh(it) } }
-            }
-
             ProvidePixel(c.spriteBank, settings.reduceMotion) {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     WearApp(vm)
@@ -64,6 +58,10 @@ class TamaActivity : ComponentActivity() {
         super.onResume()
         vm.tick()
         val c = tama
+        // The app is on-screen, so the pet is the alert — never show the notification
+        // here (this is what re-triggered it on open); the background worker and onStop
+        // re-raise it when you're away.
+        c.attentionNotifier.clear()
         if (c.stepSource.available) {
             c.stepSource.start { total -> vm.onStepTotal(total) }
         }
@@ -72,6 +70,13 @@ class TamaActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         tama.stepSource.stop()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Left the app: re-arm the notification if a need is still unmet, so you're
+        // pulled back without waiting for the next background tick.
+        vm.pet.value?.let { tama.attentionNotifier.refresh(it) }
     }
 
     private fun requestPerms() {
