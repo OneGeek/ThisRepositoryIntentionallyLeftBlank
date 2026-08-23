@@ -127,7 +127,7 @@ fun Ground(rugId: Int, width: Dp, modifier: Modifier = Modifier, shadow: Boolean
 }
 
 @Composable
-fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean, rugId: Int, coatId: Int) {
+fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boolean, rugId: Int, coatId: Int, previewLive: Offset = Offset.Zero) {
     val bg = when {
         pet.stage == Stage.EGG -> "bg_egg"
         pet.asleep || !pet.lightOn -> "bg_room_night"
@@ -155,7 +155,7 @@ fun HomeScreen(vm: TamaViewModel, pet: Pet, ownsBeach: Boolean, ownsSpace: Boole
 
         // Centered pet, the touch-first radial menu around it, then the status ON
         // TOP so a jumping pet slips behind the meters instead of being clipped.
-        PetCenter(vm, pet, rugId, coatId)
+        PetCenter(vm, pet, rugId, coatId, previewLive)
         RadialMenu(vm, pet)
         TopStatus(pet)
     }
@@ -183,7 +183,7 @@ private fun BoxScope.TopStatus(pet: Pet) {
  * the throttle reads as a mood, never a timer.
  */
 @Composable
-private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: Int) {
+private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: Int, previewLive: Offset = Offset.Zero) {
     val (id, tag) = poseFor(pet)
     // The interactive idle pose is drawn from its part rig (body deforms; face,
     // arms, feature merely shift; shadow slides horizontally). Other poses keep
@@ -224,7 +224,9 @@ private fun BoxScope.PetCenter(vm: TamaViewModel, pet: Pet, rugId: Int, coatId: 
     // letting go springs it back with a wobble. An EXTRA layer over the frame
     // animation + the tap bounce. `live` is the drag offset (px); the release
     // spring animates it back to zero.
-    var live by remember { mutableStateOf(Offset.Zero) }
+    // Seeded from previewLive so a preview/capture shot can show the pet mid-drag;
+    // in the app it starts at zero and the gesture drives it.
+    var live by remember(previewLive) { mutableStateOf(previewLive) }
     var springJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val scope = rememberCoroutineScope()
     val maxDragPx = with(LocalDensity.current) { 96.dp.toPx() } * 0.72f

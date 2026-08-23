@@ -1,6 +1,7 @@
 package com.tamawatch.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Offset
 import com.tamawatch.core.model.Pet
 import com.tamawatch.core.model.Species
 import com.tamawatch.core.model.Stage
@@ -41,25 +42,33 @@ val PreviewShots: List<PreviewShot> = listOf(
     PreviewShot("02_home", "Home") { vm ->
         HomeScreen(vm, previewBaby(), ownsBeach = false, ownsSpace = false, rugId = 1, coatId = 1)
     },
-    PreviewShot("03_sleeping", "Sleeping") { vm ->
+    // Pet mid-drag: the part rig deforms the body (+coat) while the face/arms/feature
+    // just shift and the shadow slides. previewLive seeds the drag offset.
+    PreviewShot("03_stretch", "Stretch") { vm ->
+        HomeScreen(
+            vm, previewBaby(), ownsBeach = false, ownsSpace = false, rugId = 1, coatId = 1,
+            previewLive = Offset(95f, -70f),
+        )
+    },
+    PreviewShot("04_sleeping", "Sleeping") { vm ->
         HomeScreen(
             vm, previewBaby(hunger = 45, happy = 55).copy(asleep = true, lightOn = false),
             ownsBeach = false, ownsSpace = false, rugId = 2, coatId = 0,
         )
     },
-    PreviewShot("04_sick", "Sick") { vm ->
+    PreviewShot("05_sick", "Sick") { vm ->
         HomeScreen(
             vm, previewBaby(hunger = 40, happy = 50, sick = true, dirty = true),
             ownsBeach = false, ownsSpace = false, rugId = 3, coatId = 0,
         )
     },
-    PreviewShot("05_status", "Status") { vm ->
+    PreviewShot("06_status", "Status") { vm ->
         StatusScreen(vm, previewBaby(hunger = 60, happy = 80))
     },
-    PreviewShot("06_shop", "Shop") { vm ->
+    PreviewShot("07_shop", "Shop") { vm ->
         ShopScreen(vm, previewBaby().copy(gp = 120))
     },
-    PreviewShot("07_help", "Help") { vm ->
+    PreviewShot("08_help", "Help") { vm ->
         HelpScreen(vm)
     },
 )
