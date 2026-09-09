@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.TTShare" parent="Theme.Material3.DayNight.NoActionBar" />
+
+    <style name="Theme.TTShare.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+        <item name="android:windowMinWidthMajor">85%</item>
+        <item name="android:windowMinWidthMinor">85%</item>
+        <item name="android:windowCloseOnTouchOutside">false</item>
+    </style>
+</resources>

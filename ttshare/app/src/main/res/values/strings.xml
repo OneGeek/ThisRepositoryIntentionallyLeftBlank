@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">TTShare</string>
+    <string name="status_starting">Starting…</string>
+    <string name="status_downloading">Downloading…</string>
+    <string name="status_no_link">No link found in the shared text</string>
+    <string name="status_done">Done, opening share sheet…</string>
+    <string name="status_failed">Download failed</string>
+    <string name="status_updating">Updating yt-dlp…</string>
+    <string name="status_ready">Share a TikTok video to this app to download it and re-share it as an MP4.</string>
+    <string name="share_title">Share video</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_close">Close</string>
+    <string name="btn_update">Update yt-dlp</string>
+    <string name="btn_update_retry">Update yt-dlp &amp; retry</string>
+    <string name="ytdlp_version">yt-dlp %1$s</string>
+</resources>

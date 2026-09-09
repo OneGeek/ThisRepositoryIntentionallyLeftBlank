@@ -1,2 +1,8 @@
 target/
 dependency-reduced-pom.xml
+
+# TTShare Android build outputs
+ttshare/.gradle/
+ttshare/**/build/
+ttshare/local.properties
+ttshare/.kotlin/
