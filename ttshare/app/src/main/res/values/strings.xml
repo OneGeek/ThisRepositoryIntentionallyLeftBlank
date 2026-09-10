@@ -2,6 +2,8 @@
     <string name="app_name">TTShare</string>
     <string name="status_starting">Starting…</string>
     <string name="status_downloading">Downloading…</string>
+    <string name="status_analyzing">Checking for letterbox bars…</string>
+    <string name="status_compressing">Compressing…</string>
     <string name="status_no_link">No link found in the shared text</string>
     <string name="status_done">Done, opening share sheet…</string>
     <string name="status_failed">Download failed</string>

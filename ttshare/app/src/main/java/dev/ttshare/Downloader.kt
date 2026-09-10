@@ -1,6 +1,7 @@
 package dev.ttshare
 
 import android.content.Context
+import android.util.Log
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import java.io.File
@@ -12,6 +13,8 @@ object Downloader {
 
     private const val SHARED_DIR_NAME: String = "shared"
     private const val MP4_EXTENSION: String = "mp4"
+    private const val OPTIMIZED_SUFFIX: String = "-ttshare"
+    private const val TAG: String = "Downloader"
     private const val RETRIES: Int = 3
     private const val SOCKET_TIMEOUT_SECONDS: Int = 15
     private const val MAX_STDERR_LINES: Int = 6
@@ -40,6 +43,34 @@ object Downloader {
         return found
     }
 
+    enum class Phase { DOWNLOADING, ANALYZING, COMPRESSING }
+
+    /**
+     * Downloads [url] into [outDir], then crops letterboxing and re-encodes to a smaller MP4.
+     * Falls back to the raw download if the optimize step fails. Blocking; call from a background dispatcher.
+     */
+    fun downloadAndOptimize(
+        url: String,
+        outDir: File,
+        taskId: String,
+        ffmpeg: FfmpegRunner,
+        onProgress: (Phase, Float, String) -> Unit
+    ): File {
+        val raw: File = download(url, outDir, taskId) { pct, line -> onProgress(Phase.DOWNLOADING, pct, line) }
+        onProgress(Phase.ANALYZING, -1f, "")
+        val optimizer = MediaOptimizer(ffmpeg)
+        val optimized: File = File(outDir, raw.nameWithoutExtension + OPTIMIZED_SUFFIX + ".$MP4_EXTENSION")
+        val outcome: MediaOptimizer.Outcome = runCatching {
+            optimizer.optimize(raw, optimized) { pct -> onProgress(Phase.COMPRESSING, pct * 100f, "") }
+        }.getOrElse { error -> MediaOptimizer.Outcome(raw, null, null, error.message ?: "optimize failed") }
+        Log.i(TAG, "optimize: ${outcome.note}")
+
+        if (outcome.file != raw) {
+            raw.delete()
+        }
+        return outcome.file
+    }
+
     /**
      * Downloads [url] into [outDir] and returns the resulting MP4.
      * Blocking; call from a background dispatcher.
@@ -62,7 +93,6 @@ object Downloader {
             .addOption("-f", FORMAT_SELECTOR)
             .addOption("-S", FORMAT_SORT)
             .addOption("--merge-output-format", MP4_EXTENSION)
-            .addOption("--remux-video", MP4_EXTENSION)
             .addOption("-P", outDir.absolutePath)
             .addOption("-o", OUTPUT_TEMPLATE)
 

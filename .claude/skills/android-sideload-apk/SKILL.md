@@ -194,6 +194,24 @@ applicationVariants.all {
 }
 ```
 
+### Running the bundled FFmpeg directly
+
+`io.github.junkfood02.youtubedl-android:ffmpeg` only exposes `FFmpeg.getInstance().init(ctx)`;
+yt-dlp drives the binary internally. To call it yourself (analysis passes, re-encodes):
+
+- Executable: `File(applicationInfo.nativeLibraryDir, "libffmpeg.so")` (needs
+  `extractNativeLibs="true"`).
+- Shared libs: `<noBackupFilesDir or filesDir>/youtubedl-android/packages/ffmpeg/usr/lib`
+  after `init()` has run. Set `LD_LIBRARY_PATH` to that directory, plus `HOME` and `TMPDIR`.
+- Use `ProcessBuilder`, drain stdout and stderr on separate threads, `waitFor(timeout)`.
+- This build (FFmpeg 7.1) has `libx264`, `libx265`, `h264_mediacodec`, `aac`, and the
+  `cropdetect` filter. Check with `strings` on the extracted `libavcodec.so` before relying
+  on an encoder.
+- Validate parsing offline: there is no ffmpeg on the box and apt is not reachable, but
+  `pip install --target x imageio-ffmpeg` (PyPI is allowed) gives a static Linux ffmpeg
+  whose `-progress pipe:1` and `cropdetect` stderr format match the Android build.
+  See `ttshare/app/src/main/java/dev/ttshare/MediaOptimizer.kt` for the regexes.
+
 ## 4. Verify before delivering
 
 There is no emulator in these sessions (no KVM), so static checks are all you get.
@@ -281,5 +299,6 @@ open it; Android asks to allow installs from that source.
 
 `ttshare/` is the worked example: three Kotlin files, `dev.ttshare`, minSdk 26,
 arm64-v8a, yt-dlp + FFmpeg via `io.github.junkfood02.youtubedl-android:{library,ffmpeg}:0.18.1`
-from Maven Central. Share-target activity, download to `cacheDir/shared`, FileProvider
-`ACTION_SEND video/mp4` chooser. 55 MB APK, delivered as two parts.
+from Maven Central. Share-target activity, download to `cacheDir/shared`, cropdetect +
+H.264 re-encode through the bundled FFmpeg, FileProvider `ACTION_SEND video/mp4` chooser.
+55 MB APK, delivered as two parts.

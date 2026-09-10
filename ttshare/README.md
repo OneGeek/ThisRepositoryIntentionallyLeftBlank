@@ -18,9 +18,25 @@ cookies, aria2c) is gone.
 2. `Downloader` runs yt-dlp (bundled, with FFmpeg) asking for an H.264 MP4, remuxing if
    TikTok only offers split streams or another container. Output lands in the app's
    private cache under `shared/`. No storage permission is needed.
-3. On success the activity builds an `ACTION_SEND video/mp4` intent with a FileProvider
+3. Two FFmpeg passes shrink the file (`MediaOptimizer`, `FfmpegRunner`):
+   - Analysis, about a second: decode keyframes only over the first two minutes and run
+     `cropdetect` with `reset=0`, so the reported box is the union across all sampled
+     frames. Only vertical letterboxing (black bars top and bottom) is acted on, and only
+     when the bars total at least 32 px and the remaining picture is at least half the
+     original height. Dark scenes cannot trigger a crop by themselves because the box
+     accumulates across the whole sample.
+   - Encode: crop the bars, cap the long side at 1280 px (TikTok's 1080x1920 becomes
+     720x1280), H.264 at roughly 0.06 bits per pixel per frame (about 1.7 Mbps for
+     720x1280 at 30 fps, clamped to 0.6 to 2.5 Mbps), AAC 96 kbps. The hardware encoder
+     (`h264_mediacodec`) is tried first, `libx264 -preset veryfast -crf 26` is the
+     fallback. If neither works, or the result is not smaller and nothing was cropped,
+     the raw download is shared unchanged.
+   FFmpeg is the copy bundled by the yt-dlp library; the app runs `libffmpeg.so` from
+   the native library directory with `LD_LIBRARY_PATH` pointing at the unpacked
+   `packages/ffmpeg/usr/lib`, the same way yt-dlp itself launches it.
+4. On success the activity builds an `ACTION_SEND video/mp4` intent with a FileProvider
    URI and opens `Intent.createChooser`. Pick a messaging app and the MP4 attaches.
-4. Opening the app from the launcher shows the bundled yt-dlp version and an
+5. Opening the app from the launcher shows the bundled yt-dlp version and an
    "Update yt-dlp" button. TikTok changes often; if downloads start failing, tap that.
    The failure dialog also offers "Update yt-dlp & retry".
 

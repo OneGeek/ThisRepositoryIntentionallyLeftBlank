@@ -31,6 +31,7 @@ class ShareActivity : AppCompatActivity() {
     private var currentUrl: String? = null
     private var currentTaskId: String? = null
     private var currentJob: Job? = null
+    private val ffmpeg: FfmpegRunner by lazy { FfmpegRunner(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,8 +92,8 @@ class ShareActivity : AppCompatActivity() {
             val ready: Result<Unit> = app.engineReady.await()
             val outcome: Result<File> = ready.mapCatching {
                 withContext(Dispatchers.IO) {
-                    Downloader.download(url, Downloader.sharedDir(this@ShareActivity), taskId) { pct, line ->
-                        lifecycleScope.launch { showProgress(pct, line) }
+                    Downloader.downloadAndOptimize(url, Downloader.sharedDir(this@ShareActivity), taskId, ffmpeg) { phase, pct, line ->
+                        lifecycleScope.launch { showProgress(phase, pct, line) }
                     }
                 }
             }
@@ -112,16 +113,25 @@ class ShareActivity : AppCompatActivity() {
         primaryButton.setOnClickListener {
             currentJob?.cancel()
             Downloader.cancel(taskId)
+            ffmpeg.cancel()
             finish()
         }
     }
 
-    private fun showProgress(percent: Float, line: String) {
+    private fun showProgress(phase: Downloader.Phase, percent: Float, line: String) {
+        val label: Int = when (phase) {
+            Downloader.Phase.DOWNLOADING -> R.string.status_downloading
+            Downloader.Phase.ANALYZING -> R.string.status_analyzing
+            Downloader.Phase.COMPRESSING -> R.string.status_compressing
+        }
+        statusView.setText(label)
         if (percent >= 0f) {
             progressBar.isIndeterminate = false
             progressBar.progress = percent.toInt()
+        } else {
+            progressBar.isIndeterminate = true
         }
-        detailsView.visibility = View.VISIBLE
+        detailsView.visibility = if (line.isBlank()) View.GONE else View.VISIBLE
         detailsView.text = line.trim()
     }
 
