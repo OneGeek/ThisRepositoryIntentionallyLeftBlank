@@ -20,11 +20,16 @@ cookies, aria2c) is gone.
    private cache under `shared/`. No storage permission is needed.
 3. Two FFmpeg passes shrink the file (`MediaOptimizer`, `FfmpegRunner`):
    - Analysis, about a second: decode keyframes only over the first two minutes and run
-     `cropdetect` with `reset=0`, so the reported box is the union across all sampled
-     frames. Only vertical letterboxing (black bars top and bottom) is acted on, and only
-     when the bars total at least 32 px and the remaining picture is at least half the
-     original height. Dark scenes cannot trigger a crop by themselves because the box
-     accumulates across the whole sample.
+     `cropdetect` per frame. The "majority box" is a 20th/80th percentile over those
+     per-frame boxes, so a brief full-frame transition cannot veto the crop. Frames whose
+     content extends past the majority box get a second look: the bar strips on those
+     frames are measured for blackness. Mostly black with something in it (a caption, a
+     logo) is protected and the crop widens to keep it; a strip filled with picture is a
+     transition and is cropped through. Only vertical letterboxing (black bars top and
+     bottom) is acted on, and only when the bars total at least 32 px and the remaining
+     picture is at least half the original height. Known gaps: content that appears only
+     between keyframes is never seen; a caption whose own pixels cover more than 40% of the
+     bar is treated as picture; bars that are not black are not detected at all.
    - Encode: crop the bars, cap the long side at 1280 px (TikTok's 1080x1920 becomes
      720x1280), H.264 at roughly 0.06 bits per pixel per frame (about 1.7 Mbps for
      720x1280 at 30 fps, clamped to 0.6 to 2.5 Mbps), AAC 96 kbps. The hardware encoder

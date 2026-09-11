@@ -63,7 +63,7 @@ object Downloader {
         val outcome: MediaOptimizer.Outcome = runCatching {
             optimizer.optimize(raw, optimized) { pct -> onProgress(Phase.COMPRESSING, pct * 100f, "") }
         }.getOrElse { error -> MediaOptimizer.Outcome(raw, null, null, error.message ?: "optimize failed") }
-        Log.i(TAG, "optimize: ${outcome.note}")
+        Log.i(TAG, "optimize: ${outcome.note}; ${optimizer.describe(outcome.plan, outcome.probe)}")
 
         if (outcome.file != raw) {
             raw.delete()
